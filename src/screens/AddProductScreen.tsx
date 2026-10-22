@@ -15,13 +15,11 @@ function generateId(): string {
 }
 
 function generateEAN13(): string {
-  // Generate a valid EAN-13 barcode
-  const prefix = '200'; // Internal use prefix
+  const prefix = '200';
   let code = prefix;
   for (let i = 0; i < 9; i++) {
     code += Math.floor(Math.random() * 10).toString();
   }
-  // Calculate check digit
   let sum = 0;
   for (let i = 0; i < 12; i++) {
     sum += parseInt(code[i]) * (i % 2 === 0 ? 1 : 3);
@@ -39,13 +37,11 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
   const [editMode, setEditMode] = useState(false);
   const [existingProduct, setExistingProduct] = useState<Product | null>(null);
   const [showBarcode, setShowBarcode] = useState(false);
-  const [generatedBarcode, setGeneratedBarcode] = useState('');
   const barcodeCanvasRef = useRef<HTMLCanvasElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialBarcode) {
-      // Check if this barcode already exists (edit mode)
       getProductByBarcode(initialBarcode).then(product => {
         if (product) {
           setEditMode(true);
@@ -58,13 +54,11 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
         }
       });
     }
-    // Focus name input after a short delay
     setTimeout(() => nameInputRef.current?.focus(), 300);
   }, [initialBarcode]);
 
   const handleGenerateBarcode = () => {
-    let newBarcode = generateEAN13();
-    setGeneratedBarcode(newBarcode);
+    const newBarcode = generateEAN13();
     setBarcode(newBarcode);
     setShowBarcode(true);
   };
@@ -104,7 +98,6 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
       return;
     }
 
-    // Check barcode uniqueness
     const exists = await barcodeExists(barcode.trim(), editMode ? existingProduct?.id : undefined);
     if (exists) {
       setError('رقم الباركود مسجل مسبقًا لمنتج آخر');
@@ -142,25 +135,25 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
   return (
     <div className="w-full h-full flex flex-col bg-surface">
       {/* Header */}
-      <div className="safe-top bg-white border-b border-gray-100 px-4 py-3 shrink-0">
+      <div className="safe-top bg-white px-4 py-3 shrink-0 border-b border-gray-50">
         <div className="flex items-center gap-3">
-          <button onClick={onCancel} className="p-2 -mr-2 rounded-lg text-gray-500 hover:bg-gray-50 btn-press">
+          <button onClick={onCancel} className="touchable p-2 -mr-2 rounded-lg text-gray-500">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <h1 className="text-base font-bold text-gray-900">
+          <h1 className="text-lg font-bold text-gray-900">
             {editMode ? 'تعديل المنتج' : 'إضافة منتج'}
           </h1>
         </div>
       </div>
 
       {/* Form */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4">
-        <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-5">
+        <div className="space-y-5">
           {/* Product Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">اسم المنتج</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">اسم المنتج</label>
             <input
               ref={nameInputRef}
               type="text"
@@ -173,13 +166,13 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
 
           {/* Barcode */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">رقم الباركود</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">رقم الباركود</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
-                placeholder="أدخل الباركود أو أنشئ واحدًا"
+                placeholder="أدخل الباركود"
                 className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:border-teal-500 transition-colors"
                 dir="ltr"
                 readOnly={editMode}
@@ -187,7 +180,7 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
               {!editMode && (
                 <button
                   onClick={handleGenerateBarcode}
-                  className="px-3 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 btn-press shrink-0"
+                  className="touchable px-4 py-3 rounded-xl border border-gray-200 text-gray-600 bg-white shrink-0"
                   title="إنشاء باركود"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -199,7 +192,7 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
               )}
             </div>
             {!editMode && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-400 mt-1.5">
                 يمكنك إنشاء باركود جديد للمنتجات التي لا تملك باركودًا
               </p>
             )}
@@ -207,7 +200,7 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
 
           {/* Price */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">سعر البيع (د.ع)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">سعر البيع (د.ع)</label>
             <input
               type="number"
               value={price}
@@ -230,14 +223,14 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
           {/* Generated Barcode Preview */}
           {showBarcode && barcode && (
             <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
-              <p className="text-xs text-gray-500 mb-2">الباركود المُنشأ</p>
+              <p className="text-xs text-gray-500 mb-3">الباركود المُنشأ</p>
               <canvas ref={barcodeCanvasRef} className="mx-auto max-w-full" />
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-gray-400 mt-3 mb-3">
                 هذا الرمز تعريفي جديد ولا يُضاف تلقائيًا لقواعد بيانات المتاجر الأخرى
               </p>
               <button
                 onClick={handleDownloadBarcode}
-                className="mt-3 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 btn-press"
+                className="touchable px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs bg-gray-50"
               >
                 حفظ صورة الباركود
               </button>
@@ -251,7 +244,7 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-3.5 rounded-xl text-white font-semibold text-sm btn-press disabled:opacity-50 transition-opacity"
+          className="touchable w-full py-3.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50 transition-opacity"
           style={{ backgroundColor: settings.primaryColor }}
         >
           {saving ? 'جاري الحفظ...' : editMode ? 'حفظ التعديلات' : 'حفظ المنتج'}

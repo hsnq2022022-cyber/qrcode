@@ -53,10 +53,21 @@ function App() {
     setScreen(newScreen);
   };
 
+  const handleOpenSettings = () => {
+    setPreviousScreen(screen);
+    setScreen('settings');
+  };
+
   const renderScreen = () => {
     switch (screen) {
       case 'scanner':
-        return <ScannerScreen settings={settings} onAddProduct={handleAddFromScanner} />;
+        return (
+          <ScannerScreen 
+            settings={settings} 
+            onAddProduct={handleAddFromScanner}
+            onOpenSettings={handleOpenSettings}
+          />
+        );
       case 'products':
         return <ProductsScreen settings={settings} onEdit={handleEditProduct} />;
       case 'add':
