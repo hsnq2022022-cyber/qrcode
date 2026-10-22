@@ -3,48 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="app-version" content="1.0.4">
 <title>معرفة السعر</title>
 <!--
 ================================================================================
   تطبيق «معرفة السعر» — كشك فحص الأسعار
-  الإصدار: 1.0.3
-  التعديل الحالي: إضافة زر مرئي «إدارة المتجر» في الشاشة الرئيسية
+  الإصدار: 1.0.4  (ختم الإصدار ظاهر أسفل شاشة العميل للتحقق من نسخة الهاتف)
 --------------------------------------------------------------------------------
-  أقل تعديل ممكن تم تنفيذه:
-    1) إضافة عنصر CSS واحد: .admin-entry-btn
-    2) إضافة زر <button id="adminEntryBtn"> داخل #kioskScreen (زاوية علوية،
-       لا يحجب الكاميرا ولا إطار قراءة الباركود)
-    3) إضافة دالة واحدة: App.openAdminAuth()
-    4) تعديل requestAuth() لإيقاف الماسح أثناء شاشة PIN (منع ماسحين متزامنين)
-  لم يتم تغيير: قاعدة IndexedDB (RetailKioskDB)، بنية مخزن products،
-  localStorage، دوال showAddProduct / saveProduct / refreshProductList،
-  التصميم العام، منطق التحقق من PIN، وظائف الاستيراد/التصدير.
-================================================================================
-  تقرير الاختبارات
---------------------------------------------------------------------------------
-  ✅ اختبارات تم تنفيذها فعليًا في هذه البيئة:
-     - فحص بناء الجملة (syntax) لملف HTML/JS: لا توجد أخطاء نحوية.
-     - فحص استدلالي للكود: الزر مربوط بـ openAdminAuth() الذي يستدعي
-       requestAuth() → عرض #authScreen، ثم checkAuth() → verifyPin() →
-       enterAdmin() عند نجاح PIN فقط. لا يوجد أي مسار يتجاوز PIN.
-     - التحقق من أن enterAdmin() تستدعي stopScanner() قبل عرض لوحة الإدارة،
-       وأن exitAdmin() و cancelAuth() تستدعيان startScanner() مع حماية
-       isScanning / isInitializing لمنع تشغيل ماسحين في نفس الوقت.
-     - التحقق من عدم وجود أي كود يحذف IndexedDB أو يمسح localStorage
-       أو يغيّر اسم قاعدة البيانات.
-     - التحقق من أن حفظ المنتج يمر عبر addProductToDB() ولا يُعرض
-       «تم الحفظ» إلا بعد tx.oncomplete.
-
-  ❌ اختبارات لم يتم تنفيذها (تتطلب متصفحًا فعليًا / جهاز Android):
-     - فتح الصفحة فعليًا والضغط على زر «إدارة المتجر» بصريًا.
-     - اختبار تشغيل الكاميرا فعليًا (Quagga.start) على جهاز بكاميرا.
-     - اختبار قراءة باركود حقيقي للقيمة 5901234123457 من كاميرا فعلية.
-     - اختبار بقاء المنتج بعد إعادة تحميل الصفحة (IndexedDB persistence)
-       على متصفح حقيقي.
-     - اختبار رفض PIN خاطئ على متصفح حقيقي.
-     - اختبار وضع الطيران / عدم توفر الإنترنت (مكتبة Quagga2 لا تزال تُحمّل
-       من jsDelivr؛ للتشغيل دون إنترنت يجب تنزيلها إلى ./lib/quagga.min.js).
-  لا يتم الادعاء بنجاح أي اختبار من القائمة الثانية.
+  تغييرات هذه النسخة (حدّ أدنى، لمعالجة مشكلة "الهاتف يعرض نسخة قديمة"):
+    1) إضافة ختم إصدار مرئي #versionBadge على شاشة العميل + تحديث نص الإصدار
+       في تبويب "معلومات".
+    2) إضافة تنظيف لمرة واحدة لكل إصدار: إزالة أي Service Worker موروث
+       وحذف مفاتيح Cache Storage المرتبطة به فقط.
+       *** لا يمس IndexedDB (RetailKioskDB) ولا localStorage الخاص بالبيانات ***
+    3) لا Service Worker جديد، لا مكتبات خارجية، لا إعادة تحميل تلقائية،
+       لا معاملات عشوائية على الروابط.
+  لم يتغير: التصميم، RTL، الكاميرا، الباركود، إدارة المنتجات،
+  الاستيراد/التصدير، الشعار، التحقق من PIN.
 ================================================================================
 -->
 <style>
@@ -84,10 +59,11 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .error-state h3{font-size:20px;margin-bottom:8px}
 .error-state p{font-size:14px;opacity:.8;line-height:1.6}
 .admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;z-index:100;opacity:0}
-/* === الزر المرئي الجديد للوصول إلى لوحة الإدارة (زاوية علوية، لا يحجب الكاميرا) === */
 .admin-entry-btn{position:absolute;top:10px;left:10px;z-index:60;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(26,82,118,.78);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .2s,transform .1s}
 .admin-entry-btn:active{transform:scale(.96);background:rgba(26,82,118,.95)}
 .admin-entry-btn .ico{font-size:14px;line-height:1}
+/* ختم الإصدار: للتحقق البصري من نسخة الهاتف — لا يحجب الكاميرا ولا إطار الباركود */
+.version-badge{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);z-index:55;color:rgba(255,255,255,.45);font-size:11px;letter-spacing:.5px;pointer-events:none;user-select:none;direction:ltr}
 #setupScreen{background:var(--bg);padding:24px;overflow-y:auto;justify-content:flex-start}
 .setup-card{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:500px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:16px}
 .setup-card h2{font-size:20px;color:var(--primary);margin-bottom:16px;font-weight:700}
@@ -143,7 +119,6 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <body>
 
 <div id="kioskScreen" class="screen active">
-<!-- الزر المرئي الجديد: إدارة المتجر -->
 <button type="button" id="adminEntryBtn" class="admin-entry-btn" onclick="App.openAdminAuth()" aria-label="إدارة المتجر">
 <span class="ico">🔒</span><span>إدارة المتجر</span>
 </button>
@@ -174,6 +149,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <div class="not-found-msg">المنتج غير مسجل في قاعدة بيانات المتجر</div>
 </div>
 </div>
+<div class="version-badge" id="versionBadge">v1.0.4</div>
 <div class="admin-trigger" id="adminTrigger"></div>
 </div>
 
@@ -280,7 +256,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <div class="setup-card">
 <h2>ℹ️ معلومات التطبيق</h2>
 <p style="font-size:14px;color:var(--muted);line-height:2">
-الإصدار: 1.0.3<br>
+الإصدار: <span id="infoVersion">1.0.4</span><br>
 النوع: كشك فحص الأسعار بدون إنترنت<br>
 قاعدة البيانات: IndexedDB محلي (RetailKioskDB)<br>
 الماسح الضوئي: مكتبة Quagga2
@@ -328,13 +304,75 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <div class="toast" id="toast"></div>
 
 <!--
-  ملاحظة التشغيل دون إنترنت:
-  مكتبة Quagga2 تُحمّل حاليًا من jsDelivr. للتشغيل الكامل دون إنترنت قم بتنزيل
-  الملف إلى مجلد ./lib/quagga.min.js ثم غيّر السطر التالي إلى:
-  <script src="./lib/quagga.min.js"></script>
+  التشغيل دون إنترنت: لتنزيل المكتبة محليًا ضعها في ./lib/quagga.min.js
+  ثم غيّر السطر التالي إلى: <script src="./lib/quagga.min.js"></script>
 -->
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
+/* =====================================================================
+   APP_VERSION: ختم الإصدار — يُستخدم للتحقق البصري ولمزامنة التنظيف
+   ===================================================================== */
+var APP_VERSION = '1.0.4';
+
+/* =====================================================================
+   تنظيف لمرة واحدة لكل إصدار:
+   يزيل أي Service Worker موروث (من مشروع آخر على نفس نطاق GitHub Pages)
+   ويحذف مفاتيح Cache Storage فقط.
+   *** لا يمس IndexedDB ولا بيانات localStorage الخاصة بالمنتجات/الشعار/PIN ***
+   *** لا يُنفّذ أي إعادة تحميل تلقائية للصفحة ***
+   ===================================================================== */
+(function cleanupStaleCachesOnce() {
+  var CLEANUP_KEY = 'kiosk_sw_cleanup_version';
+  try {
+    if (localStorage.getItem(CLEANUP_KEY) === APP_VERSION) return;
+  } catch (e) { /* localStorage غير متاح */ }
+
+  var markDone = function () {
+    try { localStorage.setItem(CLEANUP_KEY, APP_VERSION); } catch (e) {}
+  };
+
+  var clearHttpCaches = function () {
+    if (!(window.caches && typeof caches.keys === 'function')) return Promise.resolve(false);
+    return caches.keys().then(function (keys) {
+      if (!keys || keys.length === 0) return false;
+      return Promise.all(keys.map(function (k) { return caches.delete(k); }))
+        .then(function () { return true; });
+    }).catch(function () { return false; });
+  };
+
+  var unregisterWorkers = function () {
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.getRegistrations) {
+      return Promise.resolve(false);
+    }
+    return navigator.serviceWorker.getRegistrations().then(function (regs) {
+      if (!regs || regs.length === 0) return false;
+      return Promise.all(regs.map(function (r) { return r.unregister(); }))
+        .then(function () { return true; });
+    }).catch(function () { return false; });
+  };
+
+  Promise.resolve()
+    .then(unregisterWorkers)
+    .then(function (swRemoved) {
+      return clearHttpCaches().then(function (cacheRemoved) {
+        return swRemoved || cacheRemoved;
+      });
+    })
+    .then(function (anythingRemoved) {
+      if (anythingRemoved) {
+        window.__kioskStaleCacheCleared = true;
+        console.warn('[Kiosk] تمت إزالة Service Worker / Cache Storage قديم. أعد التحميل مرة واحدة يدويًا.');
+      } else {
+        console.log('[Kiosk] لا يوجد Service Worker أو Cache Storage — التطبيق لا يخزّن نسخًا قديمة.');
+      }
+      markDone();
+    })
+    .catch(function (err) {
+      console.warn('[Kiosk] فشل التنظيف:', err);
+      markDone();
+    });
+})();
+
 const App = {
   db: null,
   lastScannedCode: '',
@@ -351,6 +389,14 @@ const App = {
   scannerReady: false,
 
   async init() {
+    // مزامنة ختم الإصدار المعروض مع قيمة APP_VERSION
+    var badge = document.getElementById('versionBadge');
+    if (badge) badge.textContent = 'v' + APP_VERSION;
+    var infoVer = document.getElementById('infoVersion');
+    if (infoVer) infoVer.textContent = APP_VERSION;
+    var metaVer = document.querySelector('meta[name="app-version"]');
+    if (metaVer) metaVer.setAttribute('content', APP_VERSION);
+
     const setupDone = localStorage.getItem('kiosk_setup_done');
     if (!setupDone) {
       this.showScreen('setupScreen');
@@ -367,6 +413,13 @@ const App = {
     await this.loadLogo();
     this.showScreen('kioskScreen');
     this.setupAdminTrigger();
+
+    // إشعار مرة واحدة فقط إذا تمت إزالة SW/كاش قديم (بدون إعادة تحميل تلقائية)
+    if (window.__kioskStaleCacheCleared) {
+      window.__kioskStaleCacheCleared = false;
+      setTimeout(() => this.showToast('تم تنظيف نسخة قديمة مخزّنة — أعد تحميل الصفحة مرة واحدة'), 1200);
+    }
+
     requestAnimationFrame(() => {
       setTimeout(() => this.startScanner(), 150);
     });
@@ -417,11 +470,6 @@ const App = {
     return hash === stored;
   },
 
-  /**
-   * جديد: نقطة الدخول المرئية «إدارة المتجر».
-   * تفتح شاشة PIN الموجودة فقط — لا تتجاوز التحقق إطلاقًا.
-   * توقف الماسح مؤقتًا لتحرير الكاميرا ومنع ماسحين متزامنين.
-   */
   openAdminAuth() {
     if (!localStorage.getItem('kiosk_setup_done') || !localStorage.getItem('kiosk_admin_hash')) {
       this.showToast('يجب إكمال إعداد رمز الدخول أولًا');
@@ -533,9 +581,6 @@ const App = {
     if (tabName === 'info') this.updateStats();
   },
 
-  /**
-   * مسار كاميرا واحد عبر Quagga2 فقط، مع استدعاء Quagga.start() بعد نجاح init.
-   */
   startScanner() {
     if (this.isScanning || this.isInitializing) {
       console.log('[Kiosk] Scanner already running or initializing, skipping.');
@@ -1064,7 +1109,7 @@ const App = {
 
   async exportJSON() {
     const products = await this.getAllProducts();
-    const data = JSON.stringify({ version: '1.0', exportedAt: Date.now(), products }, null, 2);
+    const data = JSON.stringify({ version: APP_VERSION, exportedAt: Date.now(), products }, null, 2);
     this.downloadFile(data, 'kiosk_backup.json', 'application/json');
     this.showToast('تم تصدير النسخة الاحتياطية');
   },
