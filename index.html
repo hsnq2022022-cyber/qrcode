@@ -1,28 +1,1155 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#0d9488" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏷️</text></svg>" />
-    <title>سعري - ماسح الأسعار</title>
-    <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      html, body { 
-        width: 100%; 
-        height: 100dvh; 
-        overflow: hidden; 
-        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-        -webkit-tap-highlight-color: transparent;
-        -webkit-touch-callout: none;
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>معرفة السعر</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--primary:#1a5276;--accent:#e67e22;--success:#27ae60;--danger:#c0392b;--bg:#f0f3f5;--card:#fff;--text:#2c3e50;--muted:#7f8c8d}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw;direction:rtl}
+.screen{display:none;position:absolute;top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;z-index:1}
+.screen.active{display:flex}
+#kioskScreen{background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);padding:16px;gap:12px}
+.kiosk-header{display:flex;align-items:center;gap:16px;width:100%;max-width:600px;justify-content:center}
+.store-logo{width:64px;height:64px;border-radius:12px;object-fit:contain;background:#fff;padding:4px;display:none}
+.store-logo.visible{display:block}
+.kiosk-title{font-size:clamp(28px,6vw,48px);font-weight:800;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+.camera-wrapper{position:relative;width:100%;max-width:500px;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.camera-wrapper video{width:100%!important;height:100%!important;object-fit:cover!important;display:block}
+.camera-wrapper canvas.drawingBuffer{display:none!important}
+.scan-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5}
+.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;height:40%;border:3px solid rgba(255,255,255,.6);border-radius:12px}
+.scan-frame::before{content:'';position:absolute;top:-3px;left:10%;width:80%;height:3px;background:var(--accent);animation:scanLine 2s ease-in-out infinite;border-radius:2px}
+@keyframes scanLine{0%,100%{top:-3px}50%{top:calc(100% - 3px)}}
+.scan-corners{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;height:40%}
+.corner{position:absolute;width:24px;height:24px;border-color:var(--accent);border-style:solid;border-width:0}
+.corner.tl{top:-2px;left:-2px;border-top-width:4px;border-left-width:4px;border-radius:4px 0 0 0}
+.corner.tr{top:-2px;right:-2px;border-top-width:4px;border-right-width:4px;border-radius:0 4px 0 0}
+.corner.bl{bottom:-2px;left:-2px;border-bottom-width:4px;border-left-width:4px;border-radius:0 0 0 4px}
+.corner.br{bottom:-2px;right:-2px;border-bottom-width:4px;border-right-width:4px;border-radius:0 0 4px 0}
+.instruction{color:rgba(255,255,255,.85);font-size:clamp(14px,3vw,20px);text-align:center;margin-top:4px}
+.result-panel{width:100%;max-width:500px;min-height:120px;background:var(--card);border-radius:16px;padding:20px;text-align:center;opacity:0;transform:translateY(20px);transition:all .4s cubic-bezier(.4,0,.2,1);box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:10}
+.result-panel.visible{opacity:1;transform:translateY(0)}
+.result-panel.success{border-top:4px solid var(--success)}
+.result-panel.notfound{border-top:4px solid var(--danger)}
+.product-name{font-size:clamp(20px,4vw,32px);font-weight:700;color:var(--text);margin-bottom:8px}
+.product-price{font-size:clamp(32px,7vw,56px);font-weight:900;color:var(--success);direction:ltr}
+.product-price .currency{font-size:.5em;color:var(--muted);font-weight:600}
+.not-found-msg{font-size:clamp(16px,3vw,22px);color:var(--danger);font-weight:600;line-height:1.6}
+.error-state{text-align:center;color:#fff;padding:20px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:6;width:90%}
+.error-state h3{font-size:20px;margin-bottom:8px}
+.error-state p{font-size:14px;opacity:.8;line-height:1.6}
+.admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;z-index:100;opacity:0}
+#setupScreen{background:var(--bg);padding:24px;overflow-y:auto;justify-content:flex-start}
+.setup-card{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:500px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:16px}
+.setup-card h2{font-size:20px;color:var(--primary);margin-bottom:16px;font-weight:700}
+.btn{padding:12px 24px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#154360}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-outline{background:transparent;border:2px solid var(--primary);color:var(--primary)}
+.btn-full{width:100%}
+.btn-sm{padding:8px 16px;font-size:14px}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-size:14px;font-weight:600;margin-bottom:6px;color:var(--text)}
+.input-group input,.input-group select{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:10px;font-size:16px;font-family:inherit;direction:rtl;transition:border-color .2s}
+.input-group input:focus{outline:none;border-color:var(--primary)}
+#adminScreen{background:var(--bg);padding:0;overflow-y:auto;justify-content:flex-start}
+.admin-header{background:var(--primary);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;width:100%;position:sticky;top:0;z-index:10}
+.admin-header h2{font-size:20px;font-weight:700}
+.admin-body{padding:16px;width:100%;max-width:800px;margin:0 auto}
+.admin-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.admin-tab{padding:10px 20px;border-radius:10px;background:var(--card);border:2px solid transparent;cursor:pointer;font-weight:600;font-size:14px;transition:all .2s;font-family:inherit}
+.admin-tab.active{border-color:var(--primary);background:var(--primary);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.product-list{display:flex;flex-direction:column;gap:8px}
+.product-item{background:var(--card);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.06);gap:12px}
+.product-info{flex:1;min-width:0}
+.product-info h4{font-size:16px;font-weight:600;word-break:break-word}
+.product-info p{font-size:13px;color:var(--muted);margin-top:2px;direction:ltr;text-align:right}
+.product-actions{display:flex;gap:8px;flex-shrink:0}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.active{display:flex}
+.modal{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:450px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:20px;font-weight:700;margin-bottom:16px;color:var(--primary)}
+.pin-display{display:flex;gap:12px;justify-content:center;margin:24px 0}
+.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--primary);transition:all .2s}
+.pin-dot.filled{background:var(--primary)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin:0 auto}
+.pin-key{padding:16px;font-size:24px;font-weight:700;border:none;border-radius:12px;background:#f0f0f0;cursor:pointer;font-family:inherit;transition:all .1s}
+.pin-key:active{background:var(--primary);color:#fff;transform:scale(.95)}
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.stat-card{background:var(--card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-value{font-size:28px;font-weight:800;color:var(--primary)}
+.stat-label{font-size:13px;color:var(--muted);margin-top:4px}
+.import-preview{background:#f8f9fa;border-radius:8px;padding:12px;margin:12px 0;font-size:13px;max-height:200px;overflow-y:auto;direction:ltr;text-align:left}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:2000;transition:transform .3s ease;white-space:nowrap}
+.toast.visible{transform:translateX(-50%) translateY(0)}
+.test-data-btn{margin-top:8px}
+@media(max-width:480px){.camera-wrapper{aspect-ratio:3/4}.stats-grid{grid-template-columns:1fr}.product-item{flex-direction:column;align-items:flex-start}.product-actions{width:100%;justify-content:flex-end}}
+</style>
+</head>
+<body>
+
+<div id="kioskScreen" class="screen active">
+<div class="kiosk-header">
+<img id="storeLogo" class="store-logo" alt="شعار المتجر">
+<h1 class="kiosk-title">معرفة السعر</h1>
+</div>
+<div class="camera-wrapper" id="cameraWrapper">
+<div class="scan-overlay">
+<div class="scan-frame"></div>
+<div class="scan-corners">
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+</div>
+</div>
+<div id="cameraError" class="error-state" style="display:none">
+<h3>⚠️ خطأ في الكاميرا</h3>
+<p id="cameraErrorMsg">يرجى السماح بالوصول إلى الكاميرا من إعدادات الجهاز</p>
+</div>
+</div>
+<p class="instruction">وجّه باركود المنتج نحو الكاميرا</p>
+<div id="resultPanel" class="result-panel">
+<div id="resultSuccess" style="display:none">
+<div class="product-name" id="resultName"></div>
+<div class="product-price"><span id="resultPrice"></span> <span class="currency">د.ع</span></div>
+</div>
+<div id="resultNotFound" style="display:none">
+<div class="not-found-msg">المنتج غير مسجل في قاعدة بيانات المتجر</div>
+</div>
+</div>
+<div class="admin-trigger" id="adminTrigger"></div>
+</div>
+
+<div id="setupScreen" class="screen">
+<div class="setup-card">
+<h2>🔧 إعداد الكشك</h2>
+<p style="margin-bottom:16px;color:var(--muted)">قم بإعداد التطبيق قبل الاستخدام</p>
+<div class="input-group">
+<label>رمز الدخول للمدير (4 أرقام)</label>
+<input type="password" id="setupPin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="أدخل رمز مكون من 4 أرقام">
+</div>
+<div class="input-group">
+<label>تأكيد رمز الدخول</label>
+<input type="password" id="setupPinConfirm" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="أعد إدخال الرمز">
+</div>
+<button class="btn btn-primary btn-full" onclick="App.saveSetup()">حفظ وبدء الاستخدام</button>
+</div>
+</div>
+
+<div id="authScreen" class="screen">
+<div class="setup-card" style="text-align:center">
+<h2>🔐 تسجيل دخول المدير</h2>
+<p style="color:var(--muted);margin-bottom:16px">أدخل رمز الدخول للمتابعة</p>
+<div class="pin-display" id="pinDisplay">
+<div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+</div>
+<div class="pin-pad" id="pinPad"></div>
+<p id="authError" style="color:var(--danger);margin-top:12px;display:none;font-size:14px"></p>
+<button class="btn btn-outline btn-full" style="margin-top:16px" onclick="App.cancelAuth()">إلغاء</button>
+</div>
+</div>
+
+<div id="adminScreen" class="screen">
+<div class="admin-header">
+<h2>⚙️ لوحة الإدارة</h2>
+<button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff" onclick="App.exitAdmin()">العودة لوضع العملاء</button>
+</div>
+<div class="admin-body">
+<div class="admin-tabs">
+<button class="admin-tab active" onclick="App.switchTab(event,'products')">المنتجات</button>
+<button class="admin-tab" onclick="App.switchTab(event,'import')">استيراد / تصدير</button>
+<button class="admin-tab" onclick="App.switchTab(event,'settings')">الإعدادات</button>
+<button class="admin-tab" onclick="App.switchTab(event,'info')">معلومات</button>
+</div>
+
+<div id="tab-products" class="tab-content active">
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+<button class="btn btn-accent btn-sm" onclick="App.showAddProduct()">➕ إضافة منتج</button>
+<input type="text" id="searchInput" placeholder="بحث بالاسم أو الباركود..." style="flex:1;min-width:200px;padding:10px;border:2px solid #e0e0e0;border-radius:10px;font-family:inherit;font-size:14px" oninput="App.searchProducts(this.value)">
+</div>
+<div id="productList" class="product-list"></div>
+</div>
+
+<div id="tab-import" class="tab-content">
+<div class="setup-card">
+<h2>📥 استيراد المنتجات</h2>
+<p style="font-size:13px;color:var(--muted);margin-bottom:12px">الأعمدة المطلوبة: barcode, name, price | أعمدة اختيارية: description, category, sku</p>
+<input type="file" id="csvFileInput" accept=".csv" style="margin-bottom:12px" onchange="App.handleFileSelect(event)">
+<div id="importPreviewArea"></div>
+<button class="btn btn-success btn-sm" id="importBtn" style="display:none" onclick="App.executeImport()">تأكيد الاستيراد</button>
+</div>
+<div class="setup-card">
+<h2>📤 تصدير النسخة الاحتياطية</h2>
+<button class="btn btn-primary btn-sm" onclick="App.exportCSV()">تصدير CSV</button>
+<button class="btn btn-outline btn-sm" style="margin-right:8px" onclick="App.exportJSON()">تصدير JSON</button>
+</div>
+<div class="setup-card">
+<h2>📁 استيراد نسخة احتياطية</h2>
+<input type="file" id="jsonFileInput" accept=".json" onchange="App.importJSON(event)">
+</div>
+</div>
+
+<div id="tab-settings" class="tab-content">
+<div class="setup-card">
+<h2>🖼️ شعار المتجر</h2>
+<input type="file" id="logoInput" accept="image/*" onchange="App.handleLogoUpload(event)" style="margin-bottom:12px">
+<button class="btn btn-danger btn-sm" onclick="App.removeLogo()">إزالة الشعار</button>
+</div>
+<div class="setup-card">
+<h2>⏱️ مدة عرض النتيجة (ثواني)</h2>
+<div class="input-group">
+<input type="number" id="displayDuration" min="2" max="30" value="5" onchange="App.saveSetting('displayDuration',this.value)">
+</div>
+</div>
+<div class="setup-card">
+<h2>🔑 تغيير رمز الدخول</h2>
+<div class="input-group">
+<label>الرمز الحالي</label>
+<input type="password" id="oldPin" maxlength="4" inputmode="numeric">
+</div>
+<div class="input-group">
+<label>الرمز الجديد</label>
+<input type="password" id="newPin" maxlength="4" inputmode="numeric">
+</div>
+<button class="btn btn-primary btn-sm" onclick="App.changePin()">تغيير الرمز</button>
+</div>
+</div>
+
+<div id="tab-info" class="tab-content">
+<div class="stats-grid">
+<div class="stat-card"><div class="stat-value" id="statCount">0</div><div class="stat-label">عدد المنتجات</div></div>
+<div class="stat-card"><div class="stat-value" id="statDbSize">0 KB</div><div class="stat-label">حجم قاعدة البيانات</div></div>
+</div>
+<div class="setup-card">
+<h2>ℹ️ معلومات التطبيق</h2>
+<p style="font-size:14px;color:var(--muted);line-height:2">
+الإصدار: 1.0.2<br>
+النوع: كشك فحص الأسعار بدون إنترنت<br>
+قاعدة البيانات: IndexedDB محلي<br>
+الماسح الضوئي: مكتبة Quagga2 مدمجة
+</p>
+</div>
+<div class="setup-card">
+<h2>🧪 بيانات تجريبية</h2>
+<p style="font-size:13px;color:var(--muted);margin-bottom:12px">إضافة منتج تجريبي للاختبار فقط (باركود: 5901234123457)</p>
+<button class="btn btn-outline btn-sm test-data-btn" onclick="App.seedTestDataManual()">إضافة منتج تجريبي</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="productModal">
+<div class="modal">
+<h3 id="modalTitle">إضافة منتج</h3>
+<div class="input-group">
+<label>الباركود *</label>
+<input type="text" id="prodBarcode" inputmode="text" placeholder="مثال: 5901234123457">
+</div>
+<div class="input-group">
+<label>اسم المنتج *</label>
+<input type="text" id="prodName" placeholder="اسم المنتج بالعربية">
+</div>
+<div class="input-group">
+<label>السعر (د.ع) *</label>
+<input type="number" id="prodPrice" inputmode="decimal" placeholder="مثال: 2500" min="0" step="0.01">
+</div>
+<div class="input-group">
+<label>وصف إضافي (اختياري)</label>
+<input type="text" id="prodDesc" placeholder="وصف مختصر">
+</div>
+<div class="input-group">
+<label>التصنيف (اختياري)</label>
+<input type="text" id="prodCategory" placeholder="مثال: مواد غذائية">
+</div>
+<div style="display:flex;gap:8px;margin-top:16px">
+<button class="btn btn-success" style="flex:1" onclick="App.saveProduct()">حفظ</button>
+<button class="btn btn-outline" style="flex:1" onclick="App.closeModal('productModal')">إلغاء</button>
+</div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!--
+  OFFLINE DEPLOYMENT NOTE:
+  For true offline operation, download quagga.min.js to a local ./lib/ folder
+  and change this src to "./lib/quagga.min.js". The CDN is used here for
+  development convenience only. Without internet, this script will fail to load.
+-->
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
+<script>
+const App = {
+  db: null,
+  lastScannedCode: '',
+  lastScanTime: 0,
+  resultTimeout: null,
+  isScanning: false,
+  isInitializing: false,
+  editingBarcode: null,
+  pendingImportData: [],
+  pinBuffer: '',
+  adminTapCount: 0,
+  adminTapTimer: null,
+  displayDuration: 5,
+  scannerReady: false,
+
+  async init() {
+    const setupDone = localStorage.getItem('kiosk_setup_done');
+    if (!setupDone) {
+      this.showScreen('setupScreen');
+      return;
+    }
+    this.displayDuration = parseInt(localStorage.getItem('kiosk_display_duration') || '5', 10);
+    try {
+      await this.initDB();
+    } catch (dbErr) {
+      console.error('[Kiosk] Database initialization failed:', dbErr);
+      this.showToast('خطأ في فتح قاعدة البيانات');
+      return;
+    }
+    await this.loadLogo();
+    this.showScreen('kioskScreen');
+    this.setupAdminTrigger();
+    // FIX: Use requestAnimationFrame + setTimeout to ensure DOM is painted before Quagga measures container
+    requestAnimationFrame(() => {
+      setTimeout(() => this.startScanner(), 150);
+    });
+  },
+
+  initDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('RetailKioskDB', 1);
+      req.onupgradeneeded = (e) => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains('products')) {
+          d.createObjectStore('products', { keyPath: 'barcode' });
+        }
+      };
+      req.onsuccess = (e) => {
+        this.db = e.target.result;
+        console.log('[Kiosk] IndexedDB initialized successfully.');
+        resolve();
+      };
+      req.onerror = (e) => {
+        console.error('[Kiosk] IndexedDB error:', e.target.error);
+        reject(e.target.error);
+      };
+    });
+  },
+
+  showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+  },
+
+  saveSetup() {
+    const pin = document.getElementById('setupPin').value;
+    const confirmVal = document.getElementById('setupPinConfirm').value;
+    if (!/^\d{4}$/.test(pin)) { this.showToast('أدخل رمز مكون من 4 أرقام'); return; }
+    if (pin !== confirmVal) { this.showToast('الرمزان غير متطابقين'); return; }
+    const hash = btoa(pin.split('').reverse().join('') + pin);
+    localStorage.setItem('kiosk_admin_hash', hash);
+    localStorage.setItem('kiosk_setup_done', 'true');
+    this.showToast('تم حفظ الإعدادات بنجاح');
+    this.init();
+  },
+
+  verifyPin(pin) {
+    const stored = localStorage.getItem('kiosk_admin_hash');
+    if (!stored) return false;
+    const hash = btoa(pin.split('').reverse().join('') + pin);
+    return hash === stored;
+  },
+
+  setupAdminTrigger() {
+    const trigger = document.getElementById('adminTrigger');
+    trigger.addEventListener('click', () => {
+      this.adminTapCount++;
+      clearTimeout(this.adminTapTimer);
+      this.adminTapTimer = setTimeout(() => { this.adminTapCount = 0; }, 3000);
+      if (this.adminTapCount >= 5) {
+        this.adminTapCount = 0;
+        this.requestAuth();
       }
-      #root { width: 100%; height: 100dvh; overflow: hidden; }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./src/main.tsx"></script>
-  </body>
+    });
+  },
+
+  requestAuth() {
+    this.pinBuffer = '';
+    this.updatePinDots();
+    document.getElementById('authError').style.display = 'none';
+    this.buildPinPad();
+    this.showScreen('authScreen');
+  },
+
+  buildPinPad() {
+    const pad = document.getElementById('pinPad');
+    pad.innerHTML = '';
+    const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+    keys.forEach(k => {
+      if (k === '') { const sp = document.createElement('div'); pad.appendChild(sp); return; }
+      const btn = document.createElement('button');
+      btn.className = 'pin-key';
+      btn.textContent = k;
+      btn.onclick = () => this.handlePinKey(k);
+      pad.appendChild(btn);
+    });
+  },
+
+  handlePinKey(key) {
+    if (key === '⌫') {
+      this.pinBuffer = this.pinBuffer.slice(0, -1);
+    } else if (this.pinBuffer.length < 4) {
+      this.pinBuffer += key;
+    }
+    this.updatePinDots();
+    if (this.pinBuffer.length === 4) {
+      setTimeout(() => this.checkAuth(), 200);
+    }
+  },
+
+  updatePinDots() {
+    const dots = document.querySelectorAll('#pinDisplay .pin-dot');
+    dots.forEach((dot, i) => dot.classList.toggle('filled', i < this.pinBuffer.length));
+  },
+
+  checkAuth() {
+    if (this.verifyPin(this.pinBuffer)) {
+      this.enterAdmin();
+    } else {
+      const errEl = document.getElementById('authError');
+      errEl.textContent = 'رمز الدخول غير صحيح';
+      errEl.style.display = 'block';
+      this.pinBuffer = '';
+      this.updatePinDots();
+    }
+  },
+
+  cancelAuth() {
+    this.pinBuffer = '';
+    this.showScreen('kioskScreen');
+    if (!this.isScanning && !this.isInitializing) {
+      setTimeout(() => this.startScanner(), 200);
+    }
+  },
+
+  enterAdmin() {
+    this.stopScanner();
+    this.showScreen('adminScreen');
+    this.refreshProductList();
+    this.updateStats();
+  },
+
+  exitAdmin() {
+    this.showScreen('kioskScreen');
+    setTimeout(() => this.startScanner(), 300);
+  },
+
+  switchTab(evt, tabName) {
+    // FIX: Use evt parameter instead of implicit global event object
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    if (evt && evt.currentTarget) {
+      evt.currentTarget.classList.add('active');
+    }
+    const tabEl = document.getElementById('tab-' + tabName);
+    if (tabEl) tabEl.classList.add('active');
+    if (tabName === 'info') this.updateStats();
+  },
+
+  /**
+   * FIX: Single unified camera pipeline using Quagga2 only.
+   * Root cause of original failure: Quagga.init callback does NOT automatically start scanning.
+   * Quagga.start() must be called explicitly after successful init.
+   */
+  startScanner() {
+    if (this.isScanning || this.isInitializing) {
+      console.log('[Kiosk] Scanner already running or initializing, skipping.');
+      return;
+    }
+
+    const errorEl = document.getElementById('cameraError');
+    const errorMsg = document.getElementById('cameraErrorMsg');
+    errorEl.style.display = 'none';
+
+    if (!window.isSecureContext) {
+      errorMsg.textContent = 'يتطلب الوصول إلى الكاميرا اتصالاً آمناً (HTTPS). افتح التطبيق عبر HTTPS أو localhost.';
+      errorEl.style.display = 'block';
+      console.warn('[Kiosk] Not a secure context.');
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      errorMsg.textContent = 'المتصفح لا يدعم الوصول إلى الكاميرا. استخدم متصفح حديث أو WebView مع صلاحيات الكاميرا.';
+      errorEl.style.display = 'block';
+      console.warn('[Kiosk] mediaDevices API not available.');
+      return;
+    }
+
+    if (typeof Quagga === 'undefined') {
+      errorMsg.textContent = 'فشل تحميل مكتبة الماسح الضوئي. تأكد من الاتصال بالشبكة عند أول تشغيل أو قم بتضمين المكتبة محلياً.';
+      errorEl.style.display = 'block';
+      console.warn('[Kiosk] Quagga2 library not loaded.');
+      return;
+    }
+
+    const wrapper = document.getElementById('cameraWrapper');
+    if (!wrapper) {
+      console.error('[Kiosk] Camera wrapper element not found.');
+      return;
+    }
+
+    // Clean up any orphaned elements from previous sessions
+    const oldVideos = wrapper.querySelectorAll('video');
+    const oldCanvases = wrapper.querySelectorAll('canvas');
+    oldVideos.forEach(v => v.remove());
+    oldCanvases.forEach(c => c.remove());
+
+    this.isInitializing = true;
+
+    try {
+      Quagga.init({
+        inputStream: {
+          type: 'LiveStream',
+          target: wrapper,
+          constraints: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        },
+        decoder: {
+          readers: [
+            'ean_reader',
+            'ean_8_reader',
+            'upc_reader',
+            'upc_e_reader',
+            'code_128_reader',
+            'code_39_reader',
+            'i2of5_reader'
+          ],
+          multiple: false
+        },
+        locate: true,
+        frequency: 8,
+        numOfWorkers: navigator.hardwareConcurrency ? Math.min(navigator.hardwareConcurrency, 4) : 2
+      }, (err) => {
+        this.isInitializing = false;
+
+        if (err) {
+          console.error('[Kiosk] Quagga init failed:', err);
+          let msg = 'حدث خطأ أثناء تشغيل الكاميرا.';
+          if (err.name === 'NotAllowedError' || (typeof err === 'string' && err.includes('Permission'))) {
+            msg = 'تم رفض إذن الكاميرا. يرجى السماح بالوصول من إعدادات الجهاز ثم إعادة تحميل الصفحة.';
+          } else if (err.name === 'NotFoundError' || (typeof err === 'string' && err.includes('No camera'))) {
+            msg = 'لم يتم العثور على كاميرا. تأكد من وجود كاميرا خلفية في الجهاز.';
+          } else if (err.name === 'NotReadableError' || (typeof err === 'string' && err.includes('in use'))) {
+            msg = 'الكاميرا مستخدمة من تطبيق آخر. أغلق التطبيقات الأخرى وأعد المحاولة.';
+          } else if (typeof err === 'string') {
+            msg = err;
+          } else if (err.message) {
+            msg = err.message;
+          }
+          errorMsg.textContent = msg;
+          errorEl.style.display = 'block';
+          this.isScanning = false;
+          return;
+        }
+
+        // CRITICAL FIX: Must call Quagga.start() after successful init
+        try {
+          Quagga.offDetected();
+          Quagga.onDetected((result) => this.handleDetection(result));
+          Quagga.start();
+          this.isScanning = true;
+          this.scannerReady = true;
+          console.log('[Kiosk] Quagga.start() called. Scanner is now active.');
+        } catch (startErr) {
+          console.error('[Kiosk] Quagga.start() failed:', startErr);
+          errorMsg.textContent = 'فشل بدء الماسح الضوئي: ' + (startErr.message || startErr);
+          errorEl.style.display = 'block';
+          this.isScanning = false;
+        }
+      });
+    } catch (e) {
+      this.isInitializing = false;
+      console.error('[Kiosk] Scanner exception:', e);
+      errorMsg.textContent = 'خطأ غير متوقع: ' + (e.message || e);
+      errorEl.style.display = 'block';
+      this.isScanning = false;
+    }
+  },
+
+  stopScanner() {
+    if (!this.isScanning && !this.isInitializing) return;
+    try {
+      if (typeof Quagga !== 'undefined') {
+        Quagga.offDetected();
+        if (this.isScanning) {
+          Quagga.stop();
+        }
+      }
+      console.log('[Kiosk] Scanner stopped and listeners removed.');
+    } catch (e) {
+      console.warn('[Kiosk] Error stopping scanner:', e);
+    }
+    this.isScanning = false;
+    this.isInitializing = false;
+    this.scannerReady = false;
+    this.lastScannedCode = '';
+  },
+
+  handleDetection(result) {
+    if (!result || !result.codeResult || !result.codeResult.code) return;
+
+    // Normalize: store barcode as string to preserve leading zeros
+    const code = String(result.codeResult.code).trim();
+    if (!code) return;
+
+    const now = Date.now();
+    // Debounce: same code within 3 seconds is ignored
+    if (code === this.lastScannedCode && (now - this.lastScanTime) < 3000) return;
+
+    this.lastScannedCode = code;
+    this.lastScanTime = now;
+
+    console.log('[Kiosk] Detected barcode:', code, '| Format:', result.codeResult.format);
+
+    this.lookupProduct(code).then(product => {
+      this.showResult(product, code);
+    }).catch(err => {
+      console.error('[Kiosk] Lookup error:', err);
+    });
+  },
+
+  lookupProduct(barcode) {
+    if (!this.db) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      try {
+        const tx = this.db.transaction('products', 'readonly');
+        const store = tx.objectStore('products');
+        const req = store.get(String(barcode));
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => {
+          console.error('[Kiosk] DB lookup error:', req.error);
+          resolve(null);
+        };
+      } catch (e) {
+        console.error('[Kiosk] Transaction error:', e);
+        resolve(null);
+      }
+    });
+  },
+
+  showResult(product, barcode) {
+    const panel = document.getElementById('resultPanel');
+    const successEl = document.getElementById('resultSuccess');
+    const notFoundEl = document.getElementById('resultNotFound');
+    panel.classList.remove('success', 'notfound');
+    clearTimeout(this.resultTimeout);
+
+    if (product) {
+      document.getElementById('resultName').textContent = product.name || 'منتج';
+      document.getElementById('resultPrice').textContent = Number(product.price).toLocaleString('ar-IQ');
+      successEl.style.display = 'block';
+      notFoundEl.style.display = 'none';
+      panel.classList.add('success');
+    } else {
+      successEl.style.display = 'none';
+      notFoundEl.style.display = 'block';
+      panel.classList.add('notfound');
+    }
+    panel.classList.add('visible');
+
+    this.resultTimeout = setTimeout(() => {
+      panel.classList.remove('visible');
+      this.lastScannedCode = '';
+    }, this.displayDuration * 1000);
+  },
+
+  // FIX: Removed automatic seeding. Now manual-only from admin info tab.
+  async seedTestDataManual() {
+    if (!this.db) { this.showToast('قاعدة البيانات غير جاهزة'); return; }
+    const existing = await this.lookupProduct('5901234123457');
+    if (existing) {
+      this.showToast('المنتج التجريبي موجود بالفعل');
+      return;
+    }
+    try {
+      await this.addProductToDB({
+        barcode: '5901234123457',
+        name: 'منتج تجريبي - حليب طازج',
+        price: 2500,
+        description: 'حليب طازج كامل الدسم 1 لتر - بيانات تجريبية فقط',
+        category: 'ألبان',
+        sku: 'TEST-001',
+        updatedAt: Date.now()
+      });
+      this.showToast('تم إضافة المنتج التجريبي بنجاح');
+      this.refreshProductList();
+      this.updateStats();
+    } catch (err) {
+      this.showToast('فشل إضافة المنتج التجريبي');
+      console.error('[Kiosk] Seed error:', err);
+    }
+  },
+
+  addProductToDB(product) {
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = this.db.transaction('products', 'readwrite');
+        const store = tx.objectStore('products');
+        const req = store.put(product);
+        tx.oncomplete = () => {
+          console.log('[Kiosk] Product saved:', product.barcode);
+          resolve();
+        };
+        tx.onerror = () => {
+          console.error('[Kiosk] Save transaction error:', tx.error);
+          reject(tx.error);
+        };
+        tx.onabort = () => {
+          console.error('[Kiosk] Save transaction aborted:', tx.error);
+          reject(tx.error);
+        };
+      } catch (e) {
+        reject(e);
+      }
+    });
+  },
+
+  deleteProductFromDB(barcode) {
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = this.db.transaction('products', 'readwrite');
+        tx.objectStore('products').delete(String(barcode));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  },
+
+  getAllProducts() {
+    if (!this.db) return Promise.resolve([]);
+    return new Promise((resolve) => {
+      try {
+        const tx = this.db.transaction('products', 'readonly');
+        const req = tx.objectStore('products').getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      } catch (e) {
+        resolve([]);
+      }
+    });
+  },
+
+  showAddProduct() {
+    this.editingBarcode = null;
+    document.getElementById('modalTitle').textContent = 'إضافة منتج';
+    document.getElementById('prodBarcode').value = '';
+    document.getElementById('prodBarcode').disabled = false;
+    document.getElementById('prodName').value = '';
+    document.getElementById('prodPrice').value = '';
+    document.getElementById('prodDesc').value = '';
+    document.getElementById('prodCategory').value = '';
+    document.getElementById('productModal').classList.add('active');
+  },
+
+  async editProduct(barcode) {
+    const product = await this.lookupProduct(barcode);
+    if (!product) return;
+    this.editingBarcode = barcode;
+    document.getElementById('modalTitle').textContent = 'تعديل منتج';
+    document.getElementById('prodBarcode').value = product.barcode;
+    document.getElementById('prodBarcode').disabled = true;
+    document.getElementById('prodName').value = product.name;
+    document.getElementById('prodPrice').value = product.price;
+    document.getElementById('prodDesc').value = product.description || '';
+    document.getElementById('prodCategory').value = product.category || '';
+    document.getElementById('productModal').classList.add('active');
+  },
+
+  async saveProduct() {
+    const barcode = String(document.getElementById('prodBarcode').value).trim();
+    const name = document.getElementById('prodName').value.trim();
+    const priceStr = document.getElementById('prodPrice').value;
+    const desc = document.getElementById('prodDesc').value.trim();
+    const cat = document.getElementById('prodCategory').value.trim();
+
+    if (!barcode) { this.showToast('يرجى إدخال الباركود'); return; }
+    if (!name) { this.showToast('يرجى إدخال اسم المنتج'); return; }
+    if (!priceStr || isNaN(parseFloat(priceStr))) { this.showToast('يرجى إدخال سعر صحيح'); return; }
+
+    const price = parseFloat(priceStr);
+    if (price < 0) { this.showToast('السعر يجب أن يكون موجباً'); return; }
+    if (!isFinite(price)) { this.showToast('قيمة السعر غير صالحة'); return; }
+
+    const productData = {
+      barcode: barcode,
+      name: name,
+      price: price,
+      description: desc,
+      category: cat,
+      sku: '',
+      updatedAt: Date.now()
+    };
+
+    try {
+      await this.addProductToDB(productData);
+      this.closeModal('productModal');
+      this.refreshProductList();
+      this.updateStats();
+      this.showToast('تم حفظ المنتج بنجاح');
+    } catch (err) {
+      console.error('[Kiosk] Failed to save product:', err);
+      this.showToast('فشل حفظ المنتج في قاعدة البيانات');
+    }
+  },
+
+  async confirmDelete(barcode) {
+    if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+    try {
+      await this.deleteProductFromDB(barcode);
+      this.refreshProductList();
+      this.updateStats();
+      this.showToast('تم حذف المنتج بنجاح');
+    } catch (err) {
+      console.error('[Kiosk] Delete failed:', err);
+      this.showToast('فشل حذف المنتج');
+    }
+  },
+
+  closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+  },
+
+  async refreshProductList(filter = '') {
+    const products = await this.getAllProducts();
+    const list = document.getElementById('productList');
+    const filtered = filter
+      ? products.filter(p => p.name.includes(filter) || p.barcode.includes(filter))
+      : products;
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:24px">' +
+        (filter ? 'لا توجد نتائج للبحث' : 'لا توجد منتجات. أضف منتجاً جديداً.') + '</p>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(p => `
+      <div class="product-item">
+        <div class="product-info">
+          <h4>${this.escapeHtml(p.name)}</h4>
+          <p>${this.escapeHtml(String(p.barcode))} — ${Number(p.price).toLocaleString()} د.ع</p>
+        </div>
+        <div class="product-actions">
+          <button class="btn btn-sm btn-outline" onclick="App.editProduct('${this.escapeHtml(String(p.barcode))}')">تعديل</button>
+          <button class="btn btn-sm btn-danger" onclick="App.confirmDelete('${this.escapeHtml(String(p.barcode))}')">حذف</button>
+        </div>
+      </div>
+    `).join('');
+  },
+
+  searchProducts(query) {
+    this.refreshProductList(query);
+  },
+
+  async updateStats() {
+    const products = await this.getAllProducts();
+    document.getElementById('statCount').textContent = products.length;
+    const sizeBytes = new Blob([JSON.stringify(products)]).size;
+    document.getElementById('statDbSize').textContent = (sizeBytes / 1024).toFixed(1) + ' KB';
+  },
+
+  handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.parseCSV(e.target.result);
+    };
+    reader.onerror = () => this.showToast('خطأ في قراءة الملف');
+    reader.readAsText(file, 'UTF-8');
+  },
+
+  parseCSV(csvText) {
+    const lines = csvText.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { this.showToast('الملف فارغ أو غير صالح'); return; }
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+    const barcodeIdx = headers.indexOf('barcode');
+    const nameIdx = headers.indexOf('name');
+    const priceIdx = headers.indexOf('price');
+    const descIdx = headers.indexOf('description');
+    const catIdx = headers.indexOf('category');
+    const skuIdx = headers.indexOf('sku');
+
+    if (barcodeIdx === -1 || nameIdx === -1 || priceIdx === -1) {
+      this.showToast('الأعمدة المطلوبة مفقودة: barcode, name, price');
+      return;
+    }
+
+    this.pendingImportData = [];
+    const errors = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = this.parseCSVLine(lines[i]);
+      if (cols.length <= Math.max(barcodeIdx, nameIdx, priceIdx)) continue;
+
+      const barcode = String(cols[barcodeIdx] || '').trim();
+      const name = String(cols[nameIdx] || '').trim();
+      const priceStr = String(cols[priceIdx] || '').trim();
+      const price = parseFloat(priceStr);
+
+      if (!barcode) { errors.push(`سطر ${i + 1}: باركود فارغ`); continue; }
+      if (!name) { errors.push(`سطر ${i + 1}: اسم فارغ`); continue; }
+      if (isNaN(price) || price < 0 || !isFinite(price)) { errors.push(`سطر ${i + 1}: سعر غير صالح`); continue; }
+
+      this.pendingImportData.push({
+        barcode: barcode,
+        name: name,
+        price: price,
+        description: descIdx >= 0 ? String(cols[descIdx] || '').trim() : '',
+        category: catIdx >= 0 ? String(cols[catIdx] || '').trim() : '',
+        sku: skuIdx >= 0 ? String(cols[skuIdx] || '').trim() : '',
+        updatedAt: Date.now()
+      });
+    }
+
+    const preview = document.getElementById('importPreviewArea');
+    let html = `<p style="margin-bottom:8px">✅ تم تحليل ${this.pendingImportData.length} منتج صالح`;
+    if (errors.length) html += ` | ❌ ${errors.length} أخطاء`;
+    html += '</p>';
+    if (errors.length > 0 && errors.length <= 10) {
+      html += '<div class="import-preview">' + errors.join('<br>') + '</div>';
+    } else if (errors.length > 10) {
+      html += '<div class="import-preview">' + errors.slice(0, 10).join('<br>') + '<br>... والمزيد</div>';
+    }
+    if (this.pendingImportData.length > 0) {
+      html += '<div class="import-preview">' + this.pendingImportData.slice(0, 10).map(p =>
+        `${p.barcode} | ${p.name} | ${p.price}`
+      ).join('<br>') + (this.pendingImportData.length > 10 ? '<br>... والمزيد' : '') + '</div>';
+      document.getElementById('importBtn').style.display = 'inline-flex';
+    } else {
+      document.getElementById('importBtn').style.display = 'none';
+    }
+    preview.innerHTML = html;
+  },
+
+  parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+      else { current += ch; }
+    }
+    result.push(current);
+    return result;
+  },
+
+  async executeImport() {
+    let imported = 0;
+    let failed = 0;
+    for (const p of this.pendingImportData) {
+      try {
+        await this.addProductToDB(p);
+        imported++;
+      } catch (e) {
+        failed++;
+        console.warn('[Kiosk] Import row error:', e);
+      }
+    }
+    this.pendingImportData = [];
+    document.getElementById('importBtn').style.display = 'none';
+    document.getElementById('importPreviewArea').innerHTML = '';
+    document.getElementById('csvFileInput').value = '';
+    this.refreshProductList();
+    this.updateStats();
+    if (failed > 0) {
+      this.showToast(`تم استيراد ${imported} منتج، فشل ${failed}`);
+    } else {
+      this.showToast(`تم استيراد ${imported} منتج بنجاح`);
+    }
+  },
+
+  async exportCSV() {
+    const products = await this.getAllProducts();
+    if (!products.length) { this.showToast('لا توجد منتجات للتصدير'); return; }
+    const header = 'barcode,name,price,description,category,sku\n';
+    const rows = products.map(p =>
+      `"${p.barcode}","${(p.name||'').replace(/"/g,'""')}","${p.price}","${(p.description||'').replace(/"/g,'""')}","${(p.category||'').replace(/"/g,'""')}","${(p.sku||'').replace(/"/g,'""')}"`
+    ).join('\n');
+    this.downloadFile(header + rows, 'products_export.csv', 'text/csv');
+    this.showToast('تم التصدير بنجاح');
+  },
+
+  async exportJSON() {
+    const products = await this.getAllProducts();
+    const data = JSON.stringify({ version: '1.0', exportedAt: Date.now(), products }, null, 2);
+    this.downloadFile(data, 'kiosk_backup.json', 'application/json');
+    this.showToast('تم تصدير النسخة الاحتياطية');
+  },
+
+  async importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data.products || !Array.isArray(data.products)) throw new Error('Invalid format');
+        let count = 0;
+        let failed = 0;
+        for (const p of data.products) {
+          if (p.barcode && p.name && p.price !== undefined && !isNaN(parseFloat(p.price))) {
+            try {
+              await this.addProductToDB({
+                barcode: String(p.barcode),
+                name: String(p.name),
+                price: parseFloat(p.price),
+                description: p.description ? String(p.description) : '',
+                category: p.category ? String(p.category) : '',
+                sku: p.sku ? String(p.sku) : '',
+                updatedAt: Date.now()
+              });
+              count++;
+            } catch (err) { failed++; }
+          } else { failed++; }
+        }
+        this.refreshProductList();
+        this.updateStats();
+        if (failed > 0) {
+          this.showToast(`تم استعادة ${count} منتج، ${failed} سجلات غير صالحة`);
+        } else {
+          this.showToast(`تم استعادة ${count} منتج بنجاح`);
+        }
+      } catch (err) {
+        this.showToast('خطأ في قراءة ملف النسخة الاحتياطية');
+      }
+    };
+    reader.onerror = () => this.showToast('خطأ في قراءة الملف');
+    reader.readAsText(file);
+    event.target.value = '';
+  },
+
+  downloadFile(content, filename, type) {
+    const blob = new Blob(['\uFEFF' + content], { type: type + ';charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+
+  handleLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      this.showToast('حجم الصورة كبير جداً (الحد الأقصى 2 ميغا)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      localStorage.setItem('kiosk_logo', e.target.result);
+      this.applyLogo(e.target.result);
+      this.showToast('تم تحديث الشعار');
+    };
+    reader.readAsDataURL(file);
+  },
+
+  removeLogo() {
+    localStorage.removeItem('kiosk_logo');
+    const img = document.getElementById('storeLogo');
+    img.classList.remove('visible');
+    img.src = '';
+    this.showToast('تم إزالة الشعار');
+  },
+
+  async loadLogo() {
+    const logo = localStorage.getItem('kiosk_logo');
+    if (logo) this.applyLogo(logo);
+  },
+
+  applyLogo(src) {
+    const img = document.getElementById('storeLogo');
+    img.src = src;
+    img.classList.add('visible');
+  },
+
+  saveSetting(key, value) {
+    localStorage.setItem('kiosk_' + key, value);
+    if (key === 'displayDuration') this.displayDuration = parseInt(value, 10) || 5;
+    this.showToast('تم حفظ الإعداد');
+  },
+
+  changePin() {
+    const oldP = document.getElementById('oldPin').value;
+    const newP = document.getElementById('newPin').value;
+    if (!this.verifyPin(oldP)) { this.showToast('الرمز الحالي غير صحيح'); return; }
+    if (!/^\d{4}$/.test(newP)) { this.showToast('الرمز الجديد يجب أن يكون 4 أرقام'); return; }
+    const hash = btoa(newP.split('').reverse().join('') + newP);
+    localStorage.setItem('kiosk_admin_hash', hash);
+    document.getElementById('oldPin').value = '';
+    document.getElementById('newPin').value = '';
+    this.showToast('تم تغيير رمز الدخول');
+  },
+
+  showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('visible');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => toast.classList.remove('visible'), 3000);
+  },
+
+  escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+};
+
+// Handle visibility changes to prevent duplicate streams
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const kioskActive = document.getElementById('kioskScreen').classList.contains('active');
+    if (kioskActive && !App.isScanning && !App.isInitializing) {
+      setTimeout(() => App.startScanner(), 300);
+    }
+    requestWakeLock();
+  } else if (document.visibilityState === 'hidden') {
+    // Optionally stop scanner when hidden to release camera
+    // App.stopScanner();
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  App.stopScanner();
+});
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch (e) {}
+}
+requestWakeLock();
+</script>
+</body>
 </html>
