@@ -3,23 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="app-version" content="1.0.4">
+<meta name="app-version" content="1.0.6">
+<!-- رؤوس إرشادية لمنع التخزين المؤقت (تُحترم في بعض بيئات WebView، وليست ضمانًا في كل المتصفحات) -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>معرفة السعر</title>
 <!--
 ================================================================================
   تطبيق «معرفة السعر» — كشك فحص الأسعار
-  الإصدار: 1.0.4  (ختم الإصدار ظاهر أسفل شاشة العميل للتحقق من نسخة الهاتف)
+  الإصدار: 1.0.6
 --------------------------------------------------------------------------------
-  تغييرات هذه النسخة (حدّ أدنى، لمعالجة مشكلة "الهاتف يعرض نسخة قديمة"):
-    1) إضافة ختم إصدار مرئي #versionBadge على شاشة العميل + تحديث نص الإصدار
-       في تبويب "معلومات".
-    2) إضافة تنظيف لمرة واحدة لكل إصدار: إزالة أي Service Worker موروث
-       وحذف مفاتيح Cache Storage المرتبطة به فقط.
-       *** لا يمس IndexedDB (RetailKioskDB) ولا localStorage الخاص بالبيانات ***
-    3) لا Service Worker جديد، لا مكتبات خارجية، لا إعادة تحميل تلقائية،
-       لا معاملات عشوائية على الروابط.
-  لم يتغير: التصميم، RTL، الكاميرا، الباركود، إدارة المنتجات،
-  الاستيراد/التصدير، الشعار، التحقق من PIN.
+  هدف هذه النسخة: إنهاء اختلاف نسخة الهاتف عن نسخة الحاسوب.
+  المُضاف:
+    1) كاشف نسخة ذاتي (fetch بنفس الرابط مع cache:'reload') يقارن APP_VERSION
+       العاملة مع APP_VERSION الموجودة على الخادم.
+    2) شريط «تتوفر نسخة أحدث — تحديث الآن» يظهر فقط عند وجود نسخة أحدث،
+       والتحديث يتم بضغطة واحدة (لا إعادة تحميل تلقائية ولا حلقة).
+    3) زر «فحص التحديثات الآن» في تبويب «معلومات».
+    4) رؤوس meta إرشادية لمنع التخزين المؤقت.
+  لم يتغير: الكاميرا، الماسح، Quagga.init/start/stop، IndexedDB (RetailKioskDB)،
+    مخزن products، المنتجات/الأسعار، الشعار، localStorage، PIN، إدارة المنتجات،
+    الاستيراد/التصدير، التصميم، الألوان، RTL، زر «إدارة المتجر».
+  لم يُضف: Service Worker، مكتبات خارجية، خدمات خارجية.
+  ملاحظة: فحص التحديث يتخطى نفسه تلقائيًا على file:// ويفشل بصمت دون اتصال.
 ================================================================================
 -->
 <style>
@@ -59,11 +66,16 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .error-state h3{font-size:20px;margin-bottom:8px}
 .error-state p{font-size:14px;opacity:.8;line-height:1.6}
 .admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;z-index:100;opacity:0}
-.admin-entry-btn{position:absolute;top:10px;left:10px;z-index:60;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(26,82,118,.78);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .2s,transform .1s}
-.admin-entry-btn:active{transform:scale(.96);background:rgba(26,82,118,.95)}
+.admin-entry-btn{position:fixed;top:10px;left:10px;z-index:60;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(26,82,118,.92);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s,transform .1s;visibility:visible}
+.admin-entry-btn:active{transform:scale(.96);background:rgba(26,82,118,1)}
 .admin-entry-btn .ico{font-size:14px;line-height:1}
-/* ختم الإصدار: للتحقق البصري من نسخة الهاتف — لا يحجب الكاميرا ولا إطار الباركود */
 .version-badge{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);z-index:55;color:rgba(255,255,255,.45);font-size:11px;letter-spacing:.5px;pointer-events:none;user-select:none;direction:ltr}
+/* ===== شريط تنبيه وجود نسخة أحدث ===== */
+.update-banner{position:fixed;bottom:12px;right:12px;left:12px;z-index:1500;display:none;align-items:center;gap:10px;padding:12px 14px;background:#fff8e1;border:2px solid var(--accent);border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:14px;font-weight:700;color:#7a4a00}
+.update-banner.visible{display:flex}
+.update-banner .ub-text{flex:1;line-height:1.5}
+.update-banner .ub-btn{padding:9px 14px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.update-banner .ub-close{width:30px;height:30px;border:none;border-radius:8px;background:transparent;color:#7a4a00;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0}
 #setupScreen{background:var(--bg);padding:24px;overflow-y:auto;justify-content:flex-start}
 .setup-card{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:500px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:16px}
 .setup-card h2{font-size:20px;color:var(--primary);margin-bottom:16px;font-weight:700}
@@ -110,10 +122,10 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .stat-value{font-size:28px;font-weight:800;color:var(--primary)}
 .stat-label{font-size:13px;color:var(--muted);margin-top:4px}
 .import-preview{background:#f8f9fa;border-radius:8px;padding:12px;margin:12px 0;font-size:13px;max-height:200px;overflow-y:auto;direction:ltr;text-align:left}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:2000;transition:transform .3s ease;white-space:nowrap}
+.toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%) translateY(140px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:2000;transition:transform .3s ease;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
 .toast.visible{transform:translateX(-50%) translateY(0)}
 .test-data-btn{margin-top:8px}
-@media(max-width:480px){.camera-wrapper{aspect-ratio:3/4}.stats-grid{grid-template-columns:1fr}.product-item{flex-direction:column;align-items:flex-start}.product-actions{width:100%;justify-content:flex-end}.admin-entry-btn{font-size:12px;padding:8px 12px}}
+@media(max-width:480px){.camera-wrapper{aspect-ratio:3/4}.stats-grid{grid-template-columns:1fr}.product-item{flex-direction:column;align-items:flex-start}.product-actions{width:100%;justify-content:flex-end}.admin-entry-btn{font-size:12px;padding:8px 12px;top:8px;left:8px}.update-banner{font-size:13px;padding:10px}}
 </style>
 </head>
 <body>
@@ -149,7 +161,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <div class="not-found-msg">المنتج غير مسجل في قاعدة بيانات المتجر</div>
 </div>
 </div>
-<div class="version-badge" id="versionBadge">v1.0.4</div>
+<div class="version-badge" id="versionBadge">v1.0.6</div>
 <div class="admin-trigger" id="adminTrigger"></div>
 </div>
 
@@ -256,11 +268,13 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <div class="setup-card">
 <h2>ℹ️ معلومات التطبيق</h2>
 <p style="font-size:14px;color:var(--muted);line-height:2">
-الإصدار: <span id="infoVersion">1.0.4</span><br>
+الإصدار المثبّت على هذا الجهاز: <strong id="infoVersion" style="color:var(--primary)">1.0.6</strong><br>
+أحدث إصدار على الخادم: <strong id="serverVersion" style="color:var(--primary)">—</strong><br>
 النوع: كشك فحص الأسعار بدون إنترنت<br>
 قاعدة البيانات: IndexedDB محلي (RetailKioskDB)<br>
 الماسح الضوئي: مكتبة Quagga2
 </p>
+<button class="btn btn-primary btn-sm test-data-btn" onclick="App.checkUpdateNow()">🔄 فحص التحديثات الآن</button>
 </div>
 <div class="setup-card">
 <h2>🧪 بيانات تجريبية</h2>
@@ -301,31 +315,115 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 </div>
 </div>
 
+<!-- شريط تنبيه: يظهر فقط إذا كانت النسخة على الخادم أحدث من النسخة العاملة -->
+<div class="update-banner" id="updateBanner" role="status" aria-live="polite">
+<span class="ub-text" id="updateBannerText">تتوفر نسخة أحدث من التطبيق.</span>
+<button type="button" class="ub-btn" onclick="App.applyUpdate()">تحديث الآن</button>
+<button type="button" class="ub-close" onclick="App.dismissUpdate()" aria-label="إغلاق">×</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!--
-  التشغيل دون إنترنت: لتنزيل المكتبة محليًا ضعها في ./lib/quagga.min.js
-  ثم غيّر السطر التالي إلى: <script src="./lib/quagga.min.js"></script>
+  التشغيل دون إنترنت: ضع المكتبة في ./lib/quagga.min.js ثم غيّر السطر إلى:
+  <script src="./lib/quagga.min.js"></script>
 -->
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
-/* =====================================================================
-   APP_VERSION: ختم الإصدار — يُستخدم للتحقق البصري ولمزامنة التنظيف
-   ===================================================================== */
-var APP_VERSION = '1.0.4';
+/* ===================== ختم الإصدار ===================== */
+var APP_VERSION = '1.0.6';
 
 /* =====================================================================
-   تنظيف لمرة واحدة لكل إصدار:
-   يزيل أي Service Worker موروث (من مشروع آخر على نفس نطاق GitHub Pages)
-   ويحذف مفاتيح Cache Storage فقط.
-   *** لا يمس IndexedDB ولا بيانات localStorage الخاصة بالمنتجات/الشعار/PIN ***
-   *** لا يُنفّذ أي إعادة تحميل تلقائية للصفحة ***
+   كاشف النسخة الأحدث — يحل مشكلة "الهاتف يعرض نسخة قديمة"
+   - يجلب نفس رابط الصفحة مع cache:'reload' (تجاوز لكاش HTTP)
+   - يقارن APP_VERSION العاملة مع النسخة الموجودة على الخادم
+   - لا إعادة تحميل تلقائية، لا حلقة، لا Service Worker، لا خدمات خارجية
+   - يتخطى نفسه على file:// ويفشل بصمت عند انقطاع الاتصال
    ===================================================================== */
+var __lastUpdateCheck = 0;
+var __updateCheckIntervalMs = 60000;
+var __remoteVersion = null;
+
+function parseRemoteVersion(text) {
+  var m = /APP_VERSION\s*=\s*['"]([^'"]+)['"]/.exec(text || '');
+  return m ? m[1] : null;
+}
+
+/* يعيد 1 إذا كانت remote أحدث، -1 إذا كانت أقدم، 0 إذا تساوتا */
+function compareVersions(localVer, remoteVer) {
+  var a = String(localVer).split('.').map(function (n) { return parseInt(n, 10) || 0; });
+  var b = String(remoteVer).split('.').map(function (n) { return parseInt(n, 10) || 0; });
+  var len = Math.max(a.length, b.length);
+  for (var i = 0; i < len; i++) {
+    var x = a[i] || 0, y = b[i] || 0;
+    if (y > x) return 1;
+    if (x > y) return -1;
+  }
+  return 0;
+}
+
+function showUpdateBanner(remoteVer) {
+  var banner = document.getElementById('updateBanner');
+  var txt = document.getElementById('updateBannerText');
+  if (txt) txt.textContent = 'تتوفر نسخة أحدث (' + remoteVer + ') — النسخة المعروضة حاليًا ' + APP_VERSION;
+  if (banner) banner.classList.add('visible');
+}
+
+function setServerVersionLabel(remoteVer) {
+  var el = document.getElementById('serverVersion');
+  if (el) el.textContent = remoteVer || '—';
+}
+
+function checkForUpdate(force) {
+  try {
+    if (typeof location !== 'undefined' && location.protocol === 'file:') return Promise.resolve(null);
+    if (typeof fetch !== 'function') return Promise.resolve(null);
+    var now = Date.now();
+    if (!force && (now - __lastUpdateCheck) < __updateCheckIntervalMs) return Promise.resolve(__remoteVersion);
+    __lastUpdateCheck = now;
+
+    var url = location.href.split('#')[0];
+    return fetch(url, { cache: 'reload', credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (text) {
+        var remote = parseRemoteVersion(text);
+        if (!remote) return null;
+        __remoteVersion = remote;
+        setServerVersionLabel(remote);
+        if (compareVersions(APP_VERSION, remote) === 1) {
+          console.log('[Kiosk] نسخة أحدث على الخادم:', remote, '| العاملة:', APP_VERSION);
+          showUpdateBanner(remote);
+        } else {
+          console.log('[Kiosk] النسخة العاملة محدّثة. الخادم:', remote, '| العاملة:', APP_VERSION);
+        }
+        return remote;
+      })
+      .catch(function (e) {
+        console.log('[Kiosk] تعذّر فحص التحديث (ربما لا يوجد اتصال):', e && e.message);
+        return null;
+      });
+  } catch (e) {
+    return Promise.resolve(null);
+  }
+}
+
+/* تحديث بضغطة واحدة فقط: كسر الكاش مرة واحدة عند الطلب */
+function applyUpdateNow() {
+  try {
+    var url = location.href.split('#')[0];
+    location.replace(url + (url.indexOf('?') > -1 ? '&' : '?') + 'v=' + Date.now());
+  } catch (e) {
+    location.reload();
+  }
+}
+
+/* تنظيف لمرة واحدة لكل إصدار: يزيل أي Service Worker موروث ومفاتيح Cache Storage فقط.
+   لا يمس IndexedDB ولا localStorage الخاص بالبيانات. لا إعادة تحميل تلقائية. */
 (function cleanupStaleCachesOnce() {
   var CLEANUP_KEY = 'kiosk_sw_cleanup_version';
   try {
     if (localStorage.getItem(CLEANUP_KEY) === APP_VERSION) return;
-  } catch (e) { /* localStorage غير متاح */ }
+  } catch (e) {}
 
   var markDone = function () {
     try { localStorage.setItem(CLEANUP_KEY, APP_VERSION); } catch (e) {}
@@ -335,42 +433,33 @@ var APP_VERSION = '1.0.4';
     if (!(window.caches && typeof caches.keys === 'function')) return Promise.resolve(false);
     return caches.keys().then(function (keys) {
       if (!keys || keys.length === 0) return false;
-      return Promise.all(keys.map(function (k) { return caches.delete(k); }))
-        .then(function () { return true; });
+      return Promise.all(keys.map(function (k) { return caches.delete(k); })).then(function () { return true; });
     }).catch(function () { return false; });
   };
 
   var unregisterWorkers = function () {
-    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.getRegistrations) {
-      return Promise.resolve(false);
-    }
+    if (!('serviceWorker' in navigator) || !navigator.serviceWorker.getRegistrations) return Promise.resolve(false);
     return navigator.serviceWorker.getRegistrations().then(function (regs) {
       if (!regs || regs.length === 0) return false;
-      return Promise.all(regs.map(function (r) { return r.unregister(); }))
-        .then(function () { return true; });
+      return Promise.all(regs.map(function (r) { return r.unregister(); })).then(function () { return true; });
     }).catch(function () { return false; });
   };
 
   Promise.resolve()
     .then(unregisterWorkers)
     .then(function (swRemoved) {
-      return clearHttpCaches().then(function (cacheRemoved) {
-        return swRemoved || cacheRemoved;
-      });
+      return clearHttpCaches().then(function (cacheRemoved) { return swRemoved || cacheRemoved; });
     })
     .then(function (anythingRemoved) {
       if (anythingRemoved) {
         window.__kioskStaleCacheCleared = true;
-        console.warn('[Kiosk] تمت إزالة Service Worker / Cache Storage قديم. أعد التحميل مرة واحدة يدويًا.');
+        console.warn('[Kiosk] تمت إزالة Service Worker / Cache Storage قديم.');
       } else {
         console.log('[Kiosk] لا يوجد Service Worker أو Cache Storage — التطبيق لا يخزّن نسخًا قديمة.');
       }
       markDone();
     })
-    .catch(function (err) {
-      console.warn('[Kiosk] فشل التنظيف:', err);
-      markDone();
-    });
+    .catch(function (err) { console.warn('[Kiosk] فشل التنظيف:', err); markDone(); });
 })();
 
 const App = {
@@ -388,8 +477,26 @@ const App = {
   displayDuration: 5,
   scannerReady: false,
 
+  /* ===== إجراءات التحديث ===== */
+  applyUpdate() { applyUpdateNow(); },
+  dismissUpdate() {
+    var banner = document.getElementById('updateBanner');
+    if (banner) banner.classList.remove('visible');
+  },
+  checkUpdateNow() {
+    this.showToast('جارٍ فحص التحديثات...');
+    checkForUpdate(true).then((remote) => {
+      if (!remote) {
+        this.showToast('تعذّر الفحص — تحقق من الاتصال أو من رابط الموقع');
+      } else if (compareVersions(APP_VERSION, remote) === 1) {
+        this.showToast('توجد نسخة أحدث: ' + remote);
+      } else {
+        this.showToast('النسخة محدّثة (' + APP_VERSION + ')');
+      }
+    });
+  },
+
   async init() {
-    // مزامنة ختم الإصدار المعروض مع قيمة APP_VERSION
     var badge = document.getElementById('versionBadge');
     if (badge) badge.textContent = 'v' + APP_VERSION;
     var infoVer = document.getElementById('infoVersion');
@@ -398,6 +505,10 @@ const App = {
     if (metaVer) metaVer.setAttribute('content', APP_VERSION);
 
     const setupDone = localStorage.getItem('kiosk_setup_done');
+
+    // فحص النسخة الأحدث مرة عند الإقلاع (لا يؤثر على بقية التهيئة)
+    checkForUpdate(false);
+
     if (!setupDone) {
       this.showScreen('setupScreen');
       return;
@@ -414,7 +525,6 @@ const App = {
     this.showScreen('kioskScreen');
     this.setupAdminTrigger();
 
-    // إشعار مرة واحدة فقط إذا تمت إزالة SW/كاش قديم (بدون إعادة تحميل تلقائية)
     if (window.__kioskStaleCacheCleared) {
       window.__kioskStaleCacheCleared = false;
       setTimeout(() => this.showToast('تم تنظيف نسخة قديمة مخزّنة — أعد تحميل الصفحة مرة واحدة'), 1200);
@@ -561,6 +671,7 @@ const App = {
     this.showScreen('adminScreen');
     this.refreshProductList();
     this.updateStats();
+    checkForUpdate(true);
   },
 
   exitAdmin() {
@@ -578,7 +689,7 @@ const App = {
     }
     const tabEl = document.getElementById('tab-' + tabName);
     if (tabEl) tabEl.classList.add('active');
-    if (tabName === 'info') this.updateStats();
+    if (tabName === 'info') { this.updateStats(); checkForUpdate(true); }
   },
 
   startScanner() {
@@ -1240,6 +1351,8 @@ document.addEventListener('visibilitychange', () => {
     if (kioskActive && !App.isScanning && !App.isInitializing) {
       setTimeout(() => App.startScanner(), 300);
     }
+    // إعادة الفحص عند الرجوع للتبويب (مقيّد بـ 60 ثانية داخل الدالة)
+    checkForUpdate(false);
     requestWakeLock();
   } else if (document.visibilityState === 'hidden') {
     App.stopScanner();
