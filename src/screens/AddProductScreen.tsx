@@ -244,7 +244,7 @@ export default function AddProductScreen({ settings, initialBarcode, onSaved, on
         <button
           onClick={handleSave}
           disabled={saving}
-          className="touchable w-full py-3.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50 transition-opacity"
+          className="touchable w-full py-3.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50 transition-opacity shadow-md"
           style={{ backgroundColor: settings.primaryColor }}
         >
           {saving ? 'جاري الحفظ...' : editMode ? 'حفظ التعديلات' : 'حفظ المنتج'}

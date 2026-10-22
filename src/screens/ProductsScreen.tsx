@@ -44,7 +44,7 @@ export default function ProductsScreen({ settings, onEdit }: ProductsScreenProps
       <div className="safe-top bg-white px-4 pt-4 pb-3 shrink-0 border-b border-gray-50">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-gray-900">المنتجات</h1>
-          <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+          <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
             {products.length} منتج
           </span>
         </div>
@@ -90,7 +90,7 @@ export default function ProductsScreen({ settings, onEdit }: ProductsScreenProps
             {filtered.map((product) => (
               <div
                 key={product.id}
-                className="mx-3 mb-2 bg-white rounded-xl border border-gray-100 overflow-hidden"
+                className="mx-3 mb-2 bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm"
               >
                 <div className="flex items-center p-3.5">
                   <div className="flex-1 min-w-0" onClick={() => onEdit(product.barcode)}>

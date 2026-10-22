@@ -63,7 +63,7 @@ function getIcon(id: string, active: boolean) {
 
 export default function BottomNav({ current, onChange, primaryColor }: BottomNavProps) {
   return (
-    <nav className="safe-bottom bg-white border-t border-gray-100 flex items-stretch shrink-0" style={{ height: '60px' }}>
+    <nav className="safe-bottom bg-white border-t border-gray-100 flex items-stretch shrink-0 shadow-sm" style={{ height: '60px' }}>
       {tabs.map((tab) => {
         const isActive = current === tab.id;
         return (
