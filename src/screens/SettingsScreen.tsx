@@ -85,31 +85,30 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
       }
     };
     reader.readAsText(file);
-    // Reset input
     e.target.value = '';
   };
 
   return (
     <div className="w-full h-full flex flex-col bg-surface">
       {/* Header */}
-      <div className="safe-top bg-white border-b border-gray-100 px-4 py-3 shrink-0">
-        <h1 className="text-base font-bold text-gray-900">الإعدادات</h1>
+      <div className="safe-top bg-white px-4 py-3 shrink-0 border-b border-gray-50">
+        <h1 className="text-xl font-bold text-gray-900">الإعدادات</h1>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-5">
         <div className="space-y-5">
-          {/* Store Identity Section */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <h2 className="text-sm font-semibold text-gray-800 mb-3">هوية المحل</h2>
+          {/* Store Identity */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+            <h2 className="text-sm font-semibold text-gray-800 mb-4">هوية المحل</h2>
             
             {/* Logo */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 shrink-0">
+              <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50 shrink-0">
                 {logo ? (
                   <img src={logo} alt="شعار" className="w-full h-full object-cover" />
                 ) : (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
                     <rect x="3" y="3" width="18" height="18" rx="2" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
@@ -119,7 +118,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
               <div className="flex-1">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-sm font-medium btn-press"
+                  className="touchable text-sm font-medium"
                   style={{ color: primaryColor }}
                 >
                   {logo ? 'تغيير الشعار' : 'اختيار شعار'}
@@ -127,7 +126,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
                 {logo && (
                   <button
                     onClick={() => setLogo(null)}
-                    className="block text-xs text-red-500 mt-1 btn-press"
+                    className="touchable block text-xs text-red-500 mt-1"
                   >
                     إزالة الشعار
                   </button>
@@ -144,7 +143,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
 
             {/* Store Name */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">اسم المحل</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">اسم المحل</label>
               <input
                 type="text"
                 value={storeName}
@@ -155,15 +154,15 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
             </div>
           </div>
 
-          {/* Color Section */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <h2 className="text-sm font-semibold text-gray-800 mb-3">اللون الأساسي</h2>
+          {/* Color */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+            <h2 className="text-sm font-semibold text-gray-800 mb-4">اللون الأساسي</h2>
             <div className="flex flex-wrap gap-3">
               {COLORS.map((color) => (
                 <button
                   key={color.value}
                   onClick={() => setPrimaryColor(color.value)}
-                  className="w-10 h-10 rounded-full border-2 transition-all btn-press flex items-center justify-center"
+                  className="touchable w-11 h-11 rounded-full border-2 transition-all flex items-center justify-center"
                   style={{
                     backgroundColor: color.value,
                     borderColor: primaryColor === color.value ? color.value : 'transparent',
@@ -172,7 +171,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
                   title={color.name}
                 >
                   {primaryColor === color.value && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
@@ -182,13 +181,13 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
           </div>
 
           {/* Preview */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <h2 className="text-sm font-semibold text-gray-800 mb-3">معاينة</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+            <h2 className="text-sm font-semibold text-gray-800 mb-4">معاينة</h2>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
               {logo ? (
-                <img src={logo} alt="" className="w-10 h-10 rounded-full object-cover" />
+                <img src={logo} alt="" className="w-11 h-11 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm"
                   style={{ backgroundColor: primaryColor }}>
                   {storeName ? storeName[0] : 'س'}
                 </div>
@@ -200,13 +199,13 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
             </div>
           </div>
 
-          {/* Backup Section */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <h2 className="text-sm font-semibold text-gray-800 mb-3">النسخ الاحتياطي</h2>
+          {/* Backup */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+            <h2 className="text-sm font-semibold text-gray-800 mb-4">النسخ الاحتياطي</h2>
             <div className="space-y-2">
               <button
                 onClick={handleExport}
-                className="w-full py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 btn-press flex items-center justify-center gap-2"
+                className="touchable w-full py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium bg-white flex items-center justify-center gap-2"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -216,7 +215,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
               </button>
               <button
                 onClick={() => importInputRef.current?.click()}
-                className="w-full py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 btn-press flex items-center justify-center gap-2"
+                className="touchable w-full py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium bg-white flex items-center justify-center gap-2"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -247,7 +246,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full py-3.5 rounded-xl text-white font-semibold text-sm btn-press disabled:opacity-50 transition-opacity"
+            className="touchable w-full py-3.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50 transition-opacity"
             style={{ backgroundColor: primaryColor }}
           >
             {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
