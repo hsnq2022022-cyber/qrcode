@@ -6,9 +6,6 @@
   --color-primary-light: #14b8a6;
   --color-surface: #fafafa;
   --color-card: #ffffff;
-  --color-text: #1a1a1a;
-  --color-text-secondary: #6b7280;
-  --color-border: #f0f0f0;
 }
 
 * {
@@ -41,7 +38,7 @@ html, body {
 .safe-top { padding-top: env(safe-area-inset-top, 0px); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
-/* Scanner */
+/* Scanner frame */
 .scanner-frame {
   width: 260px;
   height: 140px;
@@ -52,23 +49,26 @@ html, body {
 .scanner-frame::after {
   content: '';
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-color: #0d9488;
   border-style: solid;
+  border-width: 0;
 }
 
 .scanner-frame::before {
   top: 0;
   right: 0;
-  border-width: 3px 3px 0 0;
+  border-top-width: 3px;
+  border-right-width: 3px;
   border-radius: 0 8px 0 0;
 }
 
 .scanner-frame::after {
   top: 0;
   left: 0;
-  border-width: 3px 0 0 3px;
+  border-top-width: 3px;
+  border-left-width: 3px;
   border-radius: 8px 0 0 0;
 }
 
@@ -76,23 +76,26 @@ html, body {
 .scanner-corners-bottom::after {
   content: '';
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-color: #0d9488;
   border-style: solid;
+  border-width: 0;
 }
 
 .scanner-corners-bottom::before {
   bottom: 0;
   right: 0;
-  border-width: 0 3px 3px 0;
+  border-bottom-width: 3px;
+  border-right-width: 3px;
   border-radius: 0 0 8px 0;
 }
 
 .scanner-corners-bottom::after {
   bottom: 0;
   left: 0;
-  border-width: 0 0 3px 3px;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
   border-radius: 0 0 0 8px;
 }
 

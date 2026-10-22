@@ -99,7 +99,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-5">
         <div className="space-y-5">
           {/* Store Identity */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-800 mb-4">هوية المحل</h2>
             
             {/* Logo */}
@@ -155,7 +155,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
           </div>
 
           {/* Color */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-800 mb-4">اللون الأساسي</h2>
             <div className="flex flex-wrap gap-3">
               {COLORS.map((color) => (
@@ -181,7 +181,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
           </div>
 
           {/* Preview */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-800 mb-4">معاينة</h2>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
               {logo ? (
@@ -200,7 +200,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
           </div>
 
           {/* Backup */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-800 mb-4">النسخ الاحتياطي</h2>
             <div className="space-y-2">
               <button
@@ -246,7 +246,7 @@ export default function SettingsScreen({ settings, onSettingsSaved }: SettingsSc
           <button
             onClick={handleSave}
             disabled={saving}
-            className="touchable w-full py-3.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50 transition-opacity"
+            className="touchable w-full py-3.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50 transition-opacity shadow-md"
             style={{ backgroundColor: primaryColor }}
           >
             {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}

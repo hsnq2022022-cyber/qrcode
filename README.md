@@ -1,6 +1,6 @@
 # سعري - ماسح الأسعار
 
-تطبيق احترافي لأصحاب المحلات التجارية لقراءة الباركود وعرض الأسعار مباشرة، يعمل بدون إنترنت.
+تطبيق ويب احترافي لأصحاب المحلات التجارية لقراءة الباركود وعرض الأسعار مباشرة، يعمل بدون إنترنت.
 
 ## المميزات
 
@@ -12,44 +12,45 @@
 - 💿 **نسخ احتياطي** - تصدير واستيراد البيانات كملف JSON
 - 📱 **واجهة عربية** - تصميم RTL احترافي مناسب للهواتف
 
-## المتطلبات
+## التشغيل
 
-- Node.js 18+
-- npm أو yarn
-
-## التثبيت والتشغيل
+### للتطوير المحلي
 
 ```bash
 # تثبيت المكتبات
 npm install
 
-# تشغيل بيئة التطوير
+# تشغيل خادم التطوير
 npm run dev
+```
 
-# بناء المشروع للإنتاج
+ثم افتح المتصفح على: `http://localhost:3000`
+
+### للبناء والإنتاج
+
+```bash
+# بناء المشروع
 npm run build
 ```
 
-## البناء للتطبيق
-
-### الملفات الناتجة
-
-بعد تنفيذ `npm run build`، ستجد الملفات في مجلد `dist/`:
+سيتم إنشاء مجلد `dist/` يحتوي على الملفات الجاهزة للنشر:
 - `dist/index.html` - الصفحة الرئيسية
 - `dist/assets/` - ملفات CSS و JavaScript
 
-### التحويل إلى APK
+## النشر
 
-لتحويل المشروع إلى تطبيق Android:
+### على خادم ويب
 
-1. أنشئ مشروع Android Studio جديد مع WebView
+انقل محتويات مجلد `dist/` إلى خادم الويب الخاص بك.
+
+### في Android WebView
+
+1. انشئ مشروع Android Studio جديد مع WebView
 2. انقل ملفات `dist/` إلى مجلد `assets/` في مشروع Android
 3. أضف الأذونات المطلوبة في `AndroidManifest.xml`:
 
 ```xml
 <uses-permission android:name="android.permission.CAMERA" />
-<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 ```
 
 4. أضف معالجة الأذونات في `WebChromeClient`:
@@ -74,6 +75,17 @@ settings.setDomStorageEnabled(true);
 settings.setMediaPlaybackRequiresUserGesture(false);
 ```
 
+## Important Note / ملاحظة مهمة
+
+**Do not open `index.html` from the project root directly in a browser.** This file references TypeScript source files (`./src/main.tsx`) which require Vite's development server to transform them.
+
+**لا تفتح `index.html` من جذر المشروع مباشرة في المتصفح.** هذا الملف يشير إلى ملفات TypeScript الخام (`./src/main.tsx`) التي تحتاج إلى خادم Vite لتحويلها.
+
+### Correct Usage / الاستخدام الصحيح
+
+- **For development / للتطوير**: Use `npm run dev` and open `http://localhost:3000`
+- **For production / للإنتاج**: Open `dist/index.html` or serve the `dist/` folder
+
 ## المكتبات المستخدمة
 
 | المكتبة | الإصدار | الغرض | الترخيص |
@@ -89,9 +101,12 @@ settings.setMediaPlaybackRequiresUserGesture(false);
 ## هيكل المشروع
 
 ```
-├── index.html              # الصفحة الرئيسية
+├── index.html              # نقطة الدخول للتطوير (Vite dev server)
+├── dist/                   # الملفات المبنية للإنتاج
+│   ├── index.html          # الصفحة الرئيسية المبنية
+│   └── assets/             # ملفات CSS و JavaScript
 ├── src/
-│   ├── main.tsx            # نقطة الدخول
+│   ├── main.tsx            # نقطة الدخول الرئيسية
 │   ├── App.tsx             # المكون الرئيسي
 │   ├── types.ts            # أنواع TypeScript
 │   ├── db.ts               # طبقة قاعدة البيانات (IndexedDB)
@@ -115,7 +130,6 @@ settings.setMediaPlaybackRequiresUserGesture(false);
 - يجب إضافة إذن `CAMERA` في `AndroidManifest.xml`
 - يجب معالجة `WebChromeClient.onPermissionRequest` للسماح بالكاميرا
 - يجب تعطيل `setMediaPlaybackRequiresUserGesture` لتشغيل الكاميرا تلقائيًا
-- في بعض أجهزة Android، قد تحتاج `WebView.setMixedContentMode(MIXED_CONTENT_ALWAYS_ALLOW)`
 
 ### التخزين المحلي
 
