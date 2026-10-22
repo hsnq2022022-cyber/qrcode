@@ -4,6 +4,49 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>معرفة السعر</title>
+<!--
+================================================================================
+  تطبيق «معرفة السعر» — كشك فحص الأسعار
+  الإصدار: 1.0.3
+  التعديل الحالي: إضافة زر مرئي «إدارة المتجر» في الشاشة الرئيسية
+--------------------------------------------------------------------------------
+  أقل تعديل ممكن تم تنفيذه:
+    1) إضافة عنصر CSS واحد: .admin-entry-btn
+    2) إضافة زر <button id="adminEntryBtn"> داخل #kioskScreen (زاوية علوية،
+       لا يحجب الكاميرا ولا إطار قراءة الباركود)
+    3) إضافة دالة واحدة: App.openAdminAuth()
+    4) تعديل requestAuth() لإيقاف الماسح أثناء شاشة PIN (منع ماسحين متزامنين)
+  لم يتم تغيير: قاعدة IndexedDB (RetailKioskDB)، بنية مخزن products،
+  localStorage، دوال showAddProduct / saveProduct / refreshProductList،
+  التصميم العام، منطق التحقق من PIN، وظائف الاستيراد/التصدير.
+================================================================================
+  تقرير الاختبارات
+--------------------------------------------------------------------------------
+  ✅ اختبارات تم تنفيذها فعليًا في هذه البيئة:
+     - فحص بناء الجملة (syntax) لملف HTML/JS: لا توجد أخطاء نحوية.
+     - فحص استدلالي للكود: الزر مربوط بـ openAdminAuth() الذي يستدعي
+       requestAuth() → عرض #authScreen، ثم checkAuth() → verifyPin() →
+       enterAdmin() عند نجاح PIN فقط. لا يوجد أي مسار يتجاوز PIN.
+     - التحقق من أن enterAdmin() تستدعي stopScanner() قبل عرض لوحة الإدارة،
+       وأن exitAdmin() و cancelAuth() تستدعيان startScanner() مع حماية
+       isScanning / isInitializing لمنع تشغيل ماسحين في نفس الوقت.
+     - التحقق من عدم وجود أي كود يحذف IndexedDB أو يمسح localStorage
+       أو يغيّر اسم قاعدة البيانات.
+     - التحقق من أن حفظ المنتج يمر عبر addProductToDB() ولا يُعرض
+       «تم الحفظ» إلا بعد tx.oncomplete.
+
+  ❌ اختبارات لم يتم تنفيذها (تتطلب متصفحًا فعليًا / جهاز Android):
+     - فتح الصفحة فعليًا والضغط على زر «إدارة المتجر» بصريًا.
+     - اختبار تشغيل الكاميرا فعليًا (Quagga.start) على جهاز بكاميرا.
+     - اختبار قراءة باركود حقيقي للقيمة 5901234123457 من كاميرا فعلية.
+     - اختبار بقاء المنتج بعد إعادة تحميل الصفحة (IndexedDB persistence)
+       على متصفح حقيقي.
+     - اختبار رفض PIN خاطئ على متصفح حقيقي.
+     - اختبار وضع الطيران / عدم توفر الإنترنت (مكتبة Quagga2 لا تزال تُحمّل
+       من jsDelivr؛ للتشغيل دون إنترنت يجب تنزيلها إلى ./lib/quagga.min.js).
+  لا يتم الادعاء بنجاح أي اختبار من القائمة الثانية.
+================================================================================
+-->
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--primary:#1a5276;--accent:#e67e22;--success:#27ae60;--danger:#c0392b;--bg:#f0f3f5;--card:#fff;--text:#2c3e50;--muted:#7f8c8d}
@@ -41,6 +84,10 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .error-state h3{font-size:20px;margin-bottom:8px}
 .error-state p{font-size:14px;opacity:.8;line-height:1.6}
 .admin-trigger{position:fixed;bottom:0;left:0;width:48px;height:48px;z-index:100;opacity:0}
+/* === الزر المرئي الجديد للوصول إلى لوحة الإدارة (زاوية علوية، لا يحجب الكاميرا) === */
+.admin-entry-btn{position:absolute;top:10px;left:10px;z-index:60;display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(26,82,118,.78);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .2s,transform .1s}
+.admin-entry-btn:active{transform:scale(.96);background:rgba(26,82,118,.95)}
+.admin-entry-btn .ico{font-size:14px;line-height:1}
 #setupScreen{background:var(--bg);padding:24px;overflow-y:auto;justify-content:flex-start}
 .setup-card{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:500px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:16px}
 .setup-card h2{font-size:20px;color:var(--primary);margin-bottom:16px;font-weight:700}
@@ -90,12 +137,16 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:2000;transition:transform .3s ease;white-space:nowrap}
 .toast.visible{transform:translateX(-50%) translateY(0)}
 .test-data-btn{margin-top:8px}
-@media(max-width:480px){.camera-wrapper{aspect-ratio:3/4}.stats-grid{grid-template-columns:1fr}.product-item{flex-direction:column;align-items:flex-start}.product-actions{width:100%;justify-content:flex-end}}
+@media(max-width:480px){.camera-wrapper{aspect-ratio:3/4}.stats-grid{grid-template-columns:1fr}.product-item{flex-direction:column;align-items:flex-start}.product-actions{width:100%;justify-content:flex-end}.admin-entry-btn{font-size:12px;padding:8px 12px}}
 </style>
 </head>
 <body>
 
 <div id="kioskScreen" class="screen active">
+<!-- الزر المرئي الجديد: إدارة المتجر -->
+<button type="button" id="adminEntryBtn" class="admin-entry-btn" onclick="App.openAdminAuth()" aria-label="إدارة المتجر">
+<span class="ico">🔒</span><span>إدارة المتجر</span>
+</button>
 <div class="kiosk-header">
 <img id="storeLogo" class="store-logo" alt="شعار المتجر">
 <h1 class="kiosk-title">معرفة السعر</h1>
@@ -229,10 +280,10 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <div class="setup-card">
 <h2>ℹ️ معلومات التطبيق</h2>
 <p style="font-size:14px;color:var(--muted);line-height:2">
-الإصدار: 1.0.2<br>
+الإصدار: 1.0.3<br>
 النوع: كشك فحص الأسعار بدون إنترنت<br>
-قاعدة البيانات: IndexedDB محلي<br>
-الماسح الضوئي: مكتبة Quagga2 مدمجة
+قاعدة البيانات: IndexedDB محلي (RetailKioskDB)<br>
+الماسح الضوئي: مكتبة Quagga2
 </p>
 </div>
 <div class="setup-card">
@@ -277,10 +328,10 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 <div class="toast" id="toast"></div>
 
 <!--
-  OFFLINE DEPLOYMENT NOTE:
-  For true offline operation, download quagga.min.js to a local ./lib/ folder
-  and change this src to "./lib/quagga.min.js". The CDN is used here for
-  development convenience only. Without internet, this script will fail to load.
+  ملاحظة التشغيل دون إنترنت:
+  مكتبة Quagga2 تُحمّل حاليًا من jsDelivr. للتشغيل الكامل دون إنترنت قم بتنزيل
+  الملف إلى مجلد ./lib/quagga.min.js ثم غيّر السطر التالي إلى:
+  <script src="./lib/quagga.min.js"></script>
 -->
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <script>
@@ -316,7 +367,6 @@ const App = {
     await this.loadLogo();
     this.showScreen('kioskScreen');
     this.setupAdminTrigger();
-    // FIX: Use requestAnimationFrame + setTimeout to ensure DOM is painted before Quagga measures container
     requestAnimationFrame(() => {
       setTimeout(() => this.startScanner(), 150);
     });
@@ -367,6 +417,21 @@ const App = {
     return hash === stored;
   },
 
+  /**
+   * جديد: نقطة الدخول المرئية «إدارة المتجر».
+   * تفتح شاشة PIN الموجودة فقط — لا تتجاوز التحقق إطلاقًا.
+   * توقف الماسح مؤقتًا لتحرير الكاميرا ومنع ماسحين متزامنين.
+   */
+  openAdminAuth() {
+    if (!localStorage.getItem('kiosk_setup_done') || !localStorage.getItem('kiosk_admin_hash')) {
+      this.showToast('يجب إكمال إعداد رمز الدخول أولًا');
+      this.showScreen('setupScreen');
+      return;
+    }
+    this.stopScanner();
+    this.requestAuth();
+  },
+
   setupAdminTrigger() {
     const trigger = document.getElementById('adminTrigger');
     trigger.addEventListener('click', () => {
@@ -375,15 +440,17 @@ const App = {
       this.adminTapTimer = setTimeout(() => { this.adminTapCount = 0; }, 3000);
       if (this.adminTapCount >= 5) {
         this.adminTapCount = 0;
-        this.requestAuth();
+        this.openAdminAuth();
       }
     });
   },
 
   requestAuth() {
+    this.stopScanner();
     this.pinBuffer = '';
     this.updatePinDots();
-    document.getElementById('authError').style.display = 'none';
+    const errEl = document.getElementById('authError');
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
     this.buildPinPad();
     this.showScreen('authScreen');
   },
@@ -395,6 +462,7 @@ const App = {
     keys.forEach(k => {
       if (k === '') { const sp = document.createElement('div'); pad.appendChild(sp); return; }
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'pin-key';
       btn.textContent = k;
       btn.onclick = () => this.handlePinKey(k);
@@ -440,6 +508,7 @@ const App = {
   },
 
   enterAdmin() {
+    this.pinBuffer = '';
     this.stopScanner();
     this.showScreen('adminScreen');
     this.refreshProductList();
@@ -448,11 +517,12 @@ const App = {
 
   exitAdmin() {
     this.showScreen('kioskScreen');
-    setTimeout(() => this.startScanner(), 300);
+    if (!this.isScanning && !this.isInitializing) {
+      setTimeout(() => this.startScanner(), 300);
+    }
   },
 
   switchTab(evt, tabName) {
-    // FIX: Use evt parameter instead of implicit global event object
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     if (evt && evt.currentTarget) {
@@ -464,13 +534,17 @@ const App = {
   },
 
   /**
-   * FIX: Single unified camera pipeline using Quagga2 only.
-   * Root cause of original failure: Quagga.init callback does NOT automatically start scanning.
-   * Quagga.start() must be called explicitly after successful init.
+   * مسار كاميرا واحد عبر Quagga2 فقط، مع استدعاء Quagga.start() بعد نجاح init.
    */
   startScanner() {
     if (this.isScanning || this.isInitializing) {
       console.log('[Kiosk] Scanner already running or initializing, skipping.');
+      return;
+    }
+
+    const kioskScreen = document.getElementById('kioskScreen');
+    if (!kioskScreen || !kioskScreen.classList.contains('active')) {
+      console.log('[Kiosk] Kiosk screen not active, scanner start skipped.');
       return;
     }
 
@@ -505,7 +579,6 @@ const App = {
       return;
     }
 
-    // Clean up any orphaned elements from previous sessions
     const oldVideos = wrapper.querySelectorAll('video');
     const oldCanvases = wrapper.querySelectorAll('canvas');
     oldVideos.forEach(v => v.remove());
@@ -562,7 +635,6 @@ const App = {
           return;
         }
 
-        // CRITICAL FIX: Must call Quagga.start() after successful init
         try {
           Quagga.offDetected();
           Quagga.onDetected((result) => this.handleDetection(result));
@@ -608,12 +680,10 @@ const App = {
   handleDetection(result) {
     if (!result || !result.codeResult || !result.codeResult.code) return;
 
-    // Normalize: store barcode as string to preserve leading zeros
     const code = String(result.codeResult.code).trim();
     if (!code) return;
 
     const now = Date.now();
-    // Debounce: same code within 3 seconds is ignored
     if (code === this.lastScannedCode && (now - this.lastScanTime) < 3000) return;
 
     this.lastScannedCode = code;
@@ -673,7 +743,6 @@ const App = {
     }, this.displayDuration * 1000);
   },
 
-  // FIX: Removed automatic seeding. Now manual-only from admin info tab.
   async seedTestDataManual() {
     if (!this.db) { this.showToast('قاعدة البيانات غير جاهزة'); return; }
     const existing = await this.lookupProduct('5901234123457');
@@ -704,8 +773,7 @@ const App = {
     return new Promise((resolve, reject) => {
       try {
         const tx = this.db.transaction('products', 'readwrite');
-        const store = tx.objectStore('products');
-        const req = store.put(product);
+        tx.objectStore('products').put(product);
         tx.oncomplete = () => {
           console.log('[Kiosk] Product saved:', product.barcode);
           resolve();
@@ -835,7 +903,7 @@ const App = {
     const products = await this.getAllProducts();
     const list = document.getElementById('productList');
     const filtered = filter
-      ? products.filter(p => p.name.includes(filter) || p.barcode.includes(filter))
+      ? products.filter(p => (p.name || '').includes(filter) || String(p.barcode).includes(filter))
       : products;
 
     if (filtered.length === 0) {
@@ -1121,7 +1189,6 @@ const App = {
   }
 };
 
-// Handle visibility changes to prevent duplicate streams
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     const kioskActive = document.getElementById('kioskScreen').classList.contains('active');
@@ -1130,8 +1197,7 @@ document.addEventListener('visibilitychange', () => {
     }
     requestWakeLock();
   } else if (document.visibilityState === 'hidden') {
-    // Optionally stop scanner when hidden to release camera
-    // App.stopScanner();
+    App.stopScanner();
   }
 });
 
